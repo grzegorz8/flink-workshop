@@ -1,0 +1,31 @@
+---
+configuration:
+  akhq:
+    connections:
+      rta-kafka:
+        properties:
+          bootstrap:
+            servers: rta-kafka-kafka-bootstrap.kafka.svc.cluster.local:9092
+    security:
+      default-group: admin
+    server:
+      access-log:
+        enabled: false
+        name: org.akhq.log.access
+  micronaut:
+    security:
+      enabled: false
+livenessProbe:
+  initialDelaySeconds: 100
+  periodSeconds: 10
+resources:
+  limits:
+    cpu: 0.5
+    memory: 1024Mi
+  requests:
+    cpu: 0.2
+    memory: 768Mi
+service:
+  enabled: true
+  port: 8089
+  type: LoadBalancer

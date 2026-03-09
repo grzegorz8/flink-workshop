@@ -1,0 +1,78 @@
+{
+  "type": "record",
+  "name": "EventAvro",
+  "namespace": "com.xebia.flink.workshop.optimisations.serialization",
+  "fields": [
+	{
+	  "name": "id",
+	  "type": ["null", "long"],
+	  "default": null
+	},
+	{
+	  "name": "longValue1",
+	  "type": ["null", "long"],
+	  "default": null
+	},
+	{
+	  "name": "longValue2",
+	  "type": ["null", "long"],
+	  "default": null
+	},
+	{
+	  "name": "stringValue1",
+	  "type": ["null", "string"],
+	  "default": null
+	},
+	{
+	  "name": "stringValue2",
+	  "type": ["null", "string"],
+	  "default": null
+	},
+	{
+	  "name": "stringValue3",
+	  "type": ["null", "string"],
+	  "default": null
+	},
+	{
+	  "name": "nestedObjectList",
+	  "type": [
+		"null",
+		{
+		  "type": "array",
+		  "items": {
+			"type": "record",
+			"name": "NestedObject",
+			"fields": [
+			  {
+				"name": "stringValue1",
+				"type": ["null", "string"],
+				"default": null
+			  },
+			  {
+				"name": "stringValue2",
+				"type": ["null", "string"],
+				"default": null
+			  },
+			  {
+				"name": "longValue1",
+				"type": ["null", "long"],
+				"default": null
+			  }
+			]
+		  }
+		}
+	  ],
+	  "default": null
+	},
+	{
+	  "name": "booleanValue1",
+	  "type": ["null", "boolean"],
+	  "default": null
+	},
+	{
+	  "name": "booleanValue2",
+	  "type": ["null", "boolean"],
+	  "default": null
+	}
+  ]
+}

@@ -1,0 +1,27 @@
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: flink-deployments
+  namespace: flink
+spec:
+  namespaceSelector:
+    matchNames:
+      - flink
+  podMetricsEndpoints:
+    - interval: 15s
+      port: metrics
+      relabelings:
+        - sourceLabels:
+            - __meta_kubernetes_pod_label_component
+          targetLabel: flink_component
+        - sourceLabels:
+            - __meta_kubernetes_pod_label_app
+          targetLabel: flink_deployment
+  selector:
+    matchExpressions:
+      - key: component
+        operator: In
+        values:
+          - jobmanager
+          - taskmanager

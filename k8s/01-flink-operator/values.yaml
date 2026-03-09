@@ -1,0 +1,12 @@
+---
+webhook:
+  create: false
+watchNamespaces:
+  - flink
+operatorPod:
+  resources:
+    limits:
+      memory: 1536Mi
+    requests:
+      cpu: 250m
+      memory: 512Mi
