@@ -13,7 +13,6 @@
 - **flink-datagen** - contains definition of a job that produces events at given, constant rate, used. e.g. in
   autoscaler tests.
 - **flink-optimisations** - contains exercises and benchmarks related to flink optimisations.
-- **flink-serialization** - TO REMOVE
 - **flink-state-processor** - contains exercises related to
   the [Flink State Processor API](https://nightlies.apache.org/flink/flink-docs-release-2.2/docs/libs/state_processor_api/).
 - **k8s** - contains all Helm charts and other resources needed to run Flink locally on Minikube.

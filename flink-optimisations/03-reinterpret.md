@@ -15,8 +15,8 @@ ReinterpretBenchmarks.withReinterpretWithObjectReuseDisabled     thrpt   14  262
 ReinterpretBenchmarks.withReinterpretWithObjectReuseEnabled      thrpt   14  5204,786 ±  66,634  ops/ms
 ```
 
-**Explanation**: As you may remember from the slides, Flink uses a slot sharing mechanism, that allows multiple tasks to
-run within a single task slot. In our benchmarks we have parallelism=3. Let's analyze job execution graphs.
+**Explanation**: As you may remember from the slides, Flink uses a slot sharing mechanism that allows multiple tasks to
+run within a single task slot. In our benchmark, the parallelism is set to 3. Let's analyze the job execution graphs.
 
 Job graph without `reinterpretAsKeyedStream`:
 
@@ -30,10 +30,10 @@ Job graph with `reinterpretAsKeyedStream`:
 (Source) -- hash --> (Map -> Map -> Map -> Sink)
 ```
 
-With **parallelism=3** the first job needs to assign **3*4=12** tasks across 3 task slots, while the second one needs to
-assign **3*2=6** tasks on 3 task slots. Each task is executed by a **separate thread**, so the first job uses
-12 threads, while the second job can use up to 6 threads. In fact, Flink does not limit CPU usage per task slot.
-It consumes all available CPU resources. Therefore, the first job is faster only because it can consume more CPUs
+With **parallelism=3**, the first job needs to assign **3*4=12** tasks across 3 task slots, while the second one needs to
+assign **3*2=6** tasks across 3 task slots. Each task is executed by a **separate thread**, so the first job uses
+12 threads, while the second job uses up to 6 threads. In fact, Flink does not limit CPU usage per task slot -
+each task can consume all available CPU resources. Therefore, the first job is faster only because it can use more CPUs
 (12 vs 6).
 
 To make the comparison fair, we need to limit CPU usage to at most 3 cores. To achieve this, we can run the benchmarks
@@ -53,6 +53,8 @@ ReinterpretBenchmarks.withReinterpretWithObjectReuseEnabled      thrpt   14  333
 
 **Flamegraph - no reinterpret**
 
+Run `JobWithoutReinterpret.java` and open `http://localhost:8083` (Flink UI) in your browser.
+
 Most of the time the job is deserializing incoming events and serializing outgoing events.
 
 ![flamegraph_no_reinterpret.png](images/flamegraph_no_reinterpret.png)
@@ -61,14 +63,16 @@ Most of the time the job is deserializing incoming events and serializing outgoi
 
 **Flamegraph - reinterpret**
 
-Most of the time the job is deserializing incoming events and cloning events between operators within the task.
+Run `JobWithReinterpret.java` and open `http://localhost:8083` (Flink UI) in your browser.
+
+Most of the time, the job is deserializing incoming events and cloning events between operators within the task.
 
 ![flamegraph_reinterpret.png](images/flamegraph_reinterpret.png)
 
 ---
 
-**Flamegraph - reinterpret**
+**Flamegraph - reinterpret + object reuse**
 
-With object reuse the vast majority of time is spent on deserialization.
+With object reuse, the vast majority of time is spent on deserialization.
 
 ![flamegraph_reinterpret_object_reuse.png](images/flamegraph_reinterpret_object_reuse.png)

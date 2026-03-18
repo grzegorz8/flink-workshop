@@ -301,7 +301,6 @@ public class SerializationBenchmarks {
         @Override
         public void open(SourceReaderContext readerContext) {
             template = new EventAvro(
-
                     0L,
                     200L,
                     300L,

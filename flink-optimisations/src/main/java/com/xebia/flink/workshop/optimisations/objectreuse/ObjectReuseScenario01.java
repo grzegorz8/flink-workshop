@@ -25,7 +25,7 @@ public class ObjectReuseScenario01 {
 
         DataGeneratorSource<Event> source = new DataGeneratorSource<>(
                 new InputGenerator(),
-                5,
+                3,
                 RateLimiterStrategy.perSecond(parameters.getDouble("records-per-second", 1.0d)),
                 TypeInformation.of(Event.class)
         );
@@ -45,8 +45,8 @@ public class ObjectReuseScenario01 {
         @Override
         public Event map(Long value) {
             Event event = new Event();
-            event.setId(value);
-            event.setLongValue2(value);
+            event.setId(value + 1);
+            event.setLongValue2(value + 1);
             return event;
         }
     }

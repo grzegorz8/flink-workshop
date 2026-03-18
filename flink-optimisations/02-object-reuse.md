@@ -2,9 +2,55 @@
 
 ## Object reuse
 
+### Performance tests
+
+In our benchmarks `ObjectReuseBenchmarks.java`, object reuse provides ~22% higher throughput.
+
+```
+Benchmark                                       Mode  Cnt    Score    Error   Units
+ObjectReuseBenchmarks.withObjectReuseDisabled  thrpt    5  264,029 ±  5,353  ops/ms
+ObjectReuseBenchmarks.withObjectReuseEnabled   thrpt    5  322,082 ± 14,128  ops/ms
+```
+
+---
+
+### Scenario 01
+
+In the first scenario, the pipeline first duplicates each record and then doubles the field `longValue2`. The input is:
+
+```text
+Event(id=1, longValue1=null, longValue2=1, stringValue1=emitted first time, ...)
+Event(id=2, longValue1=null, longValue2=2, stringValue1=emitted first time, ...)
+Event(id=3, longValue1=null, longValue2=3, stringValue1=emitted first time, ...)
+```
+
+With object reuse disabled the output is:
+
+```text
+Event(id=1, longValue1=null, longValue2=2, stringValue1=emitted first time, ...)
+Event(id=1, longValue1=null, longValue2=2, stringValue1=emitted second time, ...)
+Event(id=2, longValue1=null, longValue2=4, stringValue1=emitted first time, ...)
+Event(id=2, longValue1=null, longValue2=4, stringValue1=emitted second time, ...)
+Event(id=3, longValue1=null, longValue2=6, stringValue1=emitted first time, ...)
+Event(id=3, longValue1=null, longValue2=6, stringValue1=emitted second time, ...)
+```
+
+With object reuse enabled the output is:
+
+```text
+Event(id=1, longValue1=null, longValue2=2, stringValue1=emitted first time, ...)
+Event(id=1, longValue1=null, longValue2=4, stringValue1=emitted second time, ...)
+Event(id=2, longValue1=null, longValue2=4, stringValue1=emitted first time, ...)
+Event(id=2, longValue1=null, longValue2=8, stringValue1=emitted second time, ...)
+Event(id=3, longValue1=null, longValue2=6, stringValue1=emitted first time, ...)
+Event(id=3, longValue1=null, longValue2=12, stringValue1=emitted second time, ...)
+```
+
+---
+
 ### Scenario 02
 
-Below you can find a stacktrace from `BarMapFunction` with object reuse **disabled**. Note that functions within the
+Below you can find a stack trace from `BarMapFunction` with object reuse **disabled**. Note that functions within the
 same Flink task are chained with `CopyingChainingOutput`.
 
 ```
@@ -53,9 +99,11 @@ at java.lang.Thread.run(Thread.java:840)
 ```
 
 `CopyingChainingOutput` implementation:
+
 ```java
+
 @Override
-    protected <X> void pushToOperator(StreamRecord<X> record) {
+protected <X> void pushToOperator(StreamRecord<X> record) {
     try {
         StreamRecord<T> castRecord = (StreamRecord<T>) record;
 
@@ -71,7 +119,7 @@ at java.lang.Thread.run(Thread.java:840)
 
 ---
 
-Below you can find a stacktrace from `BarMapFunction` with object reuse **enabled**. Note that functions within the same
+Below you can find a stack trace from `BarMapFunction` with object reuse **enabled**. Note that functions within the same
 Flink task are chained with `ChainingOutput`.
 
 ```
@@ -120,6 +168,7 @@ at java.lang.Thread.run(Thread.java:840)
 ```
 
 `ChainingOutput` implementation:
+
 ```java
 protected <X> void pushToOperator(StreamRecord<X> record) {
     try {
@@ -134,11 +183,4 @@ protected <X> void pushToOperator(StreamRecord<X> record) {
         throw new ExceptionInChainedOperatorException(e);
     }
 }
-```
-
-
-```
-Benchmark                                       Mode  Cnt    Score    Error   Units
-ObjectReuseBenchmarks.withObjectReuseDisabled  thrpt    5  264,029 ±  5,353  ops/ms
-ObjectReuseBenchmarks.withObjectReuseEnabled   thrpt    5  322,082 ± 14,128  ops/ms
 ```

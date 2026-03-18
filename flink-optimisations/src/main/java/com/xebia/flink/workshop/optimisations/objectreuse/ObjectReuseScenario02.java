@@ -94,7 +94,7 @@ public class ObjectReuseScenario02 {
         @Override
         public Event map(Event event) {
             if (!event.getStringValue1().equals("foo")) {
-                throw new RuntimeException("Unexpected value in BarMapFunction");
+                throw new RuntimeException("Unexpected value in BarMapFunction; expected=foo; actual=" + event.getStringValue1());
             }
             event.setStringValue1("bar");
             return event;
@@ -106,7 +106,7 @@ public class ObjectReuseScenario02 {
         public Event map(Event event) {
             // Note: if object-reuse is enabled, event was already modified by BarMapFunction in "parallel" branch.
             if (!event.getStringValue1().equals("foo")) {
-                throw new RuntimeException("Unexpected value in BazMapFunction");
+                throw new RuntimeException("Unexpected value in BazMapFunction; expected=foo; actual=" + event.getStringValue1());
             }
             event.setStringValue1("baz");
             return event;

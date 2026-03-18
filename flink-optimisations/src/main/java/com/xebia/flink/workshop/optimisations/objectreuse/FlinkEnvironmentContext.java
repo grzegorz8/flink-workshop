@@ -16,15 +16,11 @@ public class FlinkEnvironmentContext {
     public final StreamExecutionEnvironment env = getStreamExecutionEnvironment();
 
     protected final int parallelism = 1;
-    protected final boolean objectReuse = true;
 
     @Setup
     public void setUp() throws IOException {
         // set up the execution environment
         env.setParallelism(parallelism);
-        if (objectReuse) {
-            env.getConfig().enableObjectReuse();
-        }
 
     }
 

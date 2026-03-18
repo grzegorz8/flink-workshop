@@ -18,8 +18,8 @@ public class SerializeRecord {
         StreamExecutionEnvironment env = StreamExecutionEnvironment.createLocalEnvironmentWithWebUI(createConfiguration());
         env.setParallelism(2);
         SerializerConfigImpl serializerConfig = (SerializerConfigImpl) env.getConfig().getSerializerConfig();
-        serializerConfig.registerPojoType(EventPojo.class);
-        serializerConfig.registerPojoType(EventPojo.NestedObject.class);
+        serializerConfig.registerPojoType(EventRecord.class);
+        serializerConfig.registerPojoType(EventRecord.NestedObject.class);
 
         DataGeneratorSource<EventRecord> source = new DataGeneratorSource<>(
                 new SerializationBenchmarks.RecordInputGenerator(),

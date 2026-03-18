@@ -50,6 +50,7 @@ under the License.
         <jmh.version>1.37</jmh.version>
         <log4j.version>2.24.3</log4j.version>
         <lombok.version>1.18.42</lombok.version>
+        <slf4j.version>2.0.13</slf4j.version>
 
         <!-- Test -->
         <junit.version>5.11.4</junit.version>
@@ -95,6 +96,12 @@ under the License.
             <artifactId>lombok</artifactId>
             <version>${lombok.version}</version>
             <scope>compile</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <version>${slf4j.version}</version>
+            <scope>provided</scope>
         </dependency>
 
         <!-- Tests -->
@@ -196,10 +203,17 @@ under the License.
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.1</version>
+                <version>3.13.0</version>
                 <configuration>
                     <source>${target.java.version}</source>
                     <target>${target.java.version}</target>
+                    <annotationProcessorPaths>
+                        <path>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                            <version>${lombok.version}</version>
+                        </path>
+                    </annotationProcessorPaths>
                 </configuration>
             </plugin>
         </plugins>
@@ -219,6 +233,11 @@ under the License.
                     <groupId>org.apache.flink</groupId>
                     <artifactId>flink-clients</artifactId>
                     <version>${flink.version}</version>
+                </dependency>
+                <dependency>
+                    <groupId>org.slf4j</groupId>
+                    <artifactId>slf4j-api</artifactId>
+                    <version>${slf4j.version}</version>
                 </dependency>
             </dependencies>
         </profile>
