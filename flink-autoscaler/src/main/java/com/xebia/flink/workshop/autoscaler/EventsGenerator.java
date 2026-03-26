@@ -1,4 +1,4 @@
-package com.xebia.flink.workshop.datagen;
+package com.xebia.flink.workshop.autoscaler;
 
 import com.xebia.flink.workshop.model.Event;
 import com.xebia.flink.workshop.serde.JsonSerializationSchema;

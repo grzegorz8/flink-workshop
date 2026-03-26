@@ -65,7 +65,7 @@ You can implement the job in the following way:
 5. Print the results on the standard output (`stream.print()`).
 
 ```java
-    public static void main(String[] args) throws Exception {
+public static void main(String[] args) throws Exception {
     final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
     DataStream<ProcessingEvent> processingEvents = ...;
     DataStream<SensorReadings> sensorReadings = ...;
@@ -115,36 +115,6 @@ You can implement the job in the following way:
 ---
 
 ### Possible optimisations
-
-#### MapState iterator ordering
-
-Sometimes we want to iterate over `MapState` entries, for example to remove unnecessary items (such as entries where
-`key < timestamp`). In general, `MapState` entries iterator does not guarantee any ordering, so we need to iterate over
-all entries, which can be time-consuming. However, if RocksDB state backend is used, the entries are ordered by key
-value (a side effect of RocksDB implementation - Sorted String Tables). We can take advantage of this fact and break the
-loop if the last key is greater than given timestamp. See code below:
-
-```java
-private void cleanUpLeftBuffer(long timestamp) throws Exception {
-    Iterator<Map.Entry<Long, List<StationProcessingEvent>>> iterator = leftBuffer.entries().iterator();
-    while (iterator.hasNext()) {
-        Map.Entry<Long, List<StationProcessingEvent>> entry = iterator.next();
-        if (entry.getKey() <= timestamp) {
-            iterator.remove();
-        } else {
-            // If RocksDB is used, we can break if entry.getKey() > timestamp.
-            break;
-        }
-    }
-}
-```
-
-In this case, `MapState` iterator delegates to native RocksDB iterator, thus the results are returned in sorted order.
-**Note that this will not work with `HashMap` state which does not return entries in any particular order.**
-
-#### Iterating over entries VS Iterating over keys + get()
-
-TODO
 
 #### Timer coalescing
 

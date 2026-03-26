@@ -4,7 +4,7 @@
 
 ### Benchmarks
 
-If you run the benchmark directly from IDE, the results may be surprising - benchmark **without**
+If you run the benchmark directly from the IDE, the results may be surprising - benchmark **without**
 `reinterpretAsKeyedStream` is more performant than benchmark **with** `reinterpretAsKeyedStream`! Why?
 
 ```
@@ -55,7 +55,7 @@ ReinterpretBenchmarks.withReinterpretWithObjectReuseEnabled      thrpt   14  333
 
 Run `JobWithoutReinterpret.java` and open `http://localhost:8083` (Flink UI) in your browser.
 
-Most of the time the job is deserializing incoming events and serializing outgoing events.
+Most of the time, the job is deserializing incoming events and serializing outgoing events.
 
 ![flamegraph_no_reinterpret.png](images/flamegraph_no_reinterpret.png)
 

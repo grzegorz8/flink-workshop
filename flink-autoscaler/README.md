@@ -3,10 +3,9 @@
 In this module we focus on testing and observing flink-kubernetes-operator Autoscaler. To this end, we are going to run
 two Flink jobs:
 
-- **data-generator** which produces data at given pace (see `flink-datagen` module),
-- **busy-job** which processes events at constant pace per subtask. The busy-job (
-  `com.xebia.flink.workshop.autoscaler.BusyJob`)
-  consists of 4 operators:
+- **EventsGenerator** which produces data at given pace (`com.xebia.flink.workshop.autoscaler.EventsGenerator`),
+- **BusyJob** which processes events at constant pace per subtask. The busy-job (
+  `com.xebia.flink.workshop.autoscaler.BusyJob`) consists of 4 operators:
    ```
    (Source) -> (some-process-function) -> (another-process-function) -> (Sink)
    ```

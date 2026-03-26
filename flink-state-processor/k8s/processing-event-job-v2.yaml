@@ -2,39 +2,40 @@
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: busy-job
+  name: processing-event-job-v2
   namespace: flink
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
-  name: busy-job
+  name: processing-event-job-v2
   namespace: flink
 roleRef:
   apiGroup: rbac.authorization.k8s.io
-  kind: Role
+  kind: ClusterRole
   name: flink
 subjects:
   - kind: ServiceAccount
-    name: busy-job
+    name: processing-event-job-v2
     namespace: flink
 ---
 apiVersion: flink.apache.org/v1beta1
 kind: FlinkDeployment
 metadata:
-  name: busy-job
+  name: processing-event-job-v2
   namespace: flink
 spec:
   flinkVersion: v2_0
   image: flink:2.0.1-scala_2.12-java17
   imagePullPolicy: IfNotPresent
-  serviceAccount: busy-job
+  serviceAccount: processing-event-job-v2
   job:
-    jarURI: s3://flink/busy-job-0.1.jar
-    entryClass: com.xebia.flink.workshop.autoscaler.BusyJob
+    jarURI: s3://flink/flink-state-processor-0.12.jar
+    entryClass: com.xebia.flink.workshop.stateprocessorapi.ProcessingEventJobV2
     upgradeMode: savepoint
     state: running
     parallelism: 1
+    initialSavepointPath: s3://flink/processing-event-job-v1/savepoints/migration
   jobManager:
     replicas: 1
     resource:
@@ -42,13 +43,13 @@ spec:
       memory: 1024m
   taskManager:
     resource:
-      cpu: 0.4
+      cpu: 0.5
       memory: 1024m
   podTemplate:
     apiVersion: v1
     kind: Pod
     metadata:
-      name: busy-job-pod-template
+      name: processing-event-job-v2-pod-template
     spec:
       containers:
         - name: flink-main-container
@@ -61,44 +62,28 @@ spec:
             - name: AWS_JAVA_V1_DISABLE_DEPRECATION_ANNOUNCEMENT
               value: "true"
   flinkConfiguration:
-    rest.bind-port: 8087
-    execution.checkpointing.dir: "s3://flink/busy-job/checkpoints/"
+    rest.bind-port: "8085"
+    execution.checkpointing.dir: "s3://flink/processing-event-job-v2/checkpoints/"
     execution.checkpointing.interval: 60s
     execution.checkpointing.timeout: 1h
     execution.checkpointing.min-pause: 60s
-    execution.checkpointing.savepoint-dir: "s3://flink/busy-job/savepoints/"
-    high-availability.storageDir: "s3://flink/busy-job/high-availability/"
+    execution.checkpointing.savepoint-dir: "s3://flink/processing-event-job-v2/savepoints/"
+    high-availability.storageDir: "s3://flink/processing-event-job-v2/high-availability/"
     high-availability.type: kubernetes
     kubernetes.rest-service.exposed.type: LoadBalancer
     metrics.reporter.prom.factory.class: org.apache.flink.metrics.prometheus.PrometheusReporterFactory
     s3.access-key: admin
     s3.endpoint: http://minio.s3.svc.cluster.local:9000
-    s3.path.style.access: true
-    s3.secret-key: QcIaYxaFxZ
+    s3.path.style.access: "true"
+    s3.secret-key: admin
     state.backend.type: hashmap
     taskmanager.numberOfTaskSlots: "1"
     web.cancel.enable: "true"
     web.submit.enable: "true"
-    pipeline.max-parallelism: "60"
-    job.autoscaler.enabled: "true"
-    # jobmanager.scheduler : adaptive
-    job.autoscaler.stabilization.interval: 1m
-    job.autoscaler.metrics.window: 10m
-    job.autoscaler.target.utilization: "0.75"
-    job.autoscaler.target.utilization.boundary: "0.15"
-    job.autoscaler.scale-down.max-factor: 0.8
-    job.autoscaler.scale-up.max-factor: 5
-    job.autoscaler.scale-down.interval: 0
-    job.autoscaler.restart.time: 1m
-    job.autoscaler.catch-up.duration: 10m
-    job.autoscaler.scaling.key-group.partitions.adjust.mode: MAXIMIZE_UTILISATION
-    job.autoscaler.vertex.min-parallelism: 1
-    job.autoscaler.vertex.max-parallelism: 4
-    restart-strategy.exponential-delay.attempts-before-reset-backoff: "2147483647"
-    restart-strategy.exponential-delay.backoff-multiplier: "2"
-    restart-strategy.exponential-delay.initial-backoff: 60s
-    restart-strategy.exponential-delay.jitter-factor: "0.1"
-    restart-strategy.exponential-delay.max-backoff: 2h
-    restart-strategy.exponential-delay.reset-backoff-threshold: 24h
     restart-strategy.type: exponential-delay
-    taskmanager.memory.managed.fraction: 0.0
+    restart-strategy.exponential-delay.initial-backoff: 60s
+    restart-strategy.exponential-delay.max-backoff: 2h
+    restart-strategy.exponential-delay.backoff-multiplier: "2"
+    restart-strategy.exponential-delay.jitter-factor: "0.1"
+    restart-strategy.exponential-delay.reset-backoff-threshold: 24h
+    restart-strategy.exponential-delay.attempts-before-reset-backoff: "2147483647"

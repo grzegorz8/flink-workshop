@@ -83,7 +83,7 @@ spec:
     s3.access-key: admin
     s3.endpoint: http://minio.s3.svc.cluster.local:9000
     s3.path.style.access: true
-    s3.secret-key: QcIaYxaFxZ
+    s3.secret-key: admin
     state.backend.incremental: "true"
     state.backend.rocksdb.metrics.block-cache-capacity: true
     state.backend.rocksdb.metrics.block-cache-hit: true

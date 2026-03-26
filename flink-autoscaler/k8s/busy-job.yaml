@@ -2,13 +2,13 @@
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: test-job
+  name: busy-job
   namespace: flink
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
-  name: test-job
+  name: busy-job
   namespace: flink
 roleRef:
   apiGroup: rbac.authorization.k8s.io
@@ -16,32 +16,31 @@ roleRef:
   name: flink
 subjects:
   - kind: ServiceAccount
-    name: test-job
+    name: busy-job
     namespace: flink
 ---
 apiVersion: flink.apache.org/v1beta1
 kind: FlinkDeployment
 metadata:
-  name: test-job
+  name: busy-job
   namespace: flink
 spec:
   flinkVersion: v2_0
   image: flink:2.0.1-scala_2.12-java17
   imagePullPolicy: IfNotPresent
-  serviceAccount: test-job
+  serviceAccount: busy-job
   job:
-    jarURI: s3://flink/flink-workshop-0.12.jar
-    entryClass: com.xebia.flink.TestJob
+    jarURI: s3://flink/busy-job-0.1.jar
+    entryClass: com.xebia.flink.workshop.autoscaler.BusyJob
     upgradeMode: savepoint
     state: running
-    parallelism: 2
+    parallelism: 1
   jobManager:
     replicas: 1
     resource:
       cpu: 0.5
       memory: 1024m
   taskManager:
-#    replicas: 3
     resource:
       cpu: 0.4
       memory: 1024m
@@ -49,7 +48,7 @@ spec:
     apiVersion: v1
     kind: Pod
     metadata:
-      name: test-job-pod-template
+      name: busy-job-pod-template
     spec:
       containers:
         - name: flink-main-container
@@ -62,12 +61,13 @@ spec:
             - name: AWS_JAVA_V1_DISABLE_DEPRECATION_ANNOUNCEMENT
               value: "true"
   flinkConfiguration:
-    execution.checkpointing.dir: "s3://flink/test-job/checkpoints/"
+    rest.bind-port: 8087
+    execution.checkpointing.dir: "s3://flink/busy-job/checkpoints/"
     execution.checkpointing.interval: 60s
     execution.checkpointing.timeout: 1h
     execution.checkpointing.min-pause: 60s
-    execution.checkpointing.savepoint-dir: "s3://flink/test-job/savepoints/"
-    high-availability.storageDir: "s3://flink/test-job/high-availability/"
+    execution.checkpointing.savepoint-dir: "s3://flink/busy-job/savepoints/"
+    high-availability.storageDir: "s3://flink/busy-job/high-availability/"
     high-availability.type: kubernetes
     kubernetes.rest-service.exposed.type: LoadBalancer
     metrics.reporter.prom.factory.class: org.apache.flink.metrics.prometheus.PrometheusReporterFactory
@@ -81,7 +81,7 @@ spec:
     web.submit.enable: "true"
     pipeline.max-parallelism: "60"
     job.autoscaler.enabled: "true"
-#    jobmanager.scheduler : adaptive
+    # jobmanager.scheduler : adaptive
     job.autoscaler.stabilization.interval: 1m
     job.autoscaler.metrics.window: 10m
     job.autoscaler.target.utilization: "0.75"

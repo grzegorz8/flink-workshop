@@ -29,7 +29,6 @@ under the License.
     <modules>
         <module>flink-autoscaler</module>
         <module>flink-common</module>
-        <module>flink-datagen</module>
         <module>flink-data-stream-api</module>
         <module>flink-optimisations</module>
         <module>flink-state-processor</module>

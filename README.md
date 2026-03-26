@@ -2,16 +2,13 @@
 
 **Modules**:
 
-- **flink-autoscaler** - contains exercises related to
-  Flink Kubernetes
+- **flink-autoscaler** - contains exercises related to Flink Kubernetes
   Operator's [Autoscaler](https://nightlies.apache.org/flink/flink-kubernetes-operator-docs-main/docs/custom-resource/autoscaler/)
   feature.
 - **flink-common** - contains classes shared across multiple modules.
 - **flink-data-stream-api** - contains exercises related to
   the [Flink DataStream API](https://nightlies.apache.org/flink/flink-docs-release-2.2/docs/dev/datastream/overview/).
 - **flink-data-stream-api-solutions** - contains sample solutions for exercises.
-- **flink-datagen** - contains definition of a job that produces events at given, constant rate, used. e.g. in
-  autoscaler tests.
 - **flink-optimisations** - contains exercises and benchmarks related to flink optimisations.
 - **flink-state-processor** - contains exercises related to
   the [Flink State Processor API](https://nightlies.apache.org/flink/flink-docs-release-2.2/docs/libs/state_processor_api/).
