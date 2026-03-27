@@ -53,6 +53,7 @@ under the License.
 
         <!-- Test -->
         <junit.version>5.11.4</junit.version>
+        <awaitility.version>4.3.0</awaitility.version>
     </properties>
 
     <dependencies>
@@ -73,7 +74,7 @@ under the License.
         <!-- These dependencies are excluded from the application JAR by default. -->
         <dependency>
             <groupId>org.apache.logging.log4j</groupId>
-            <artifactId>log4j-slf4j-impl</artifactId>
+            <artifactId>log4j-slf4j2-impl</artifactId>
             <version>${log4j.version}</version>
             <scope>runtime</scope>
         </dependency>
@@ -121,6 +122,12 @@ under the License.
             <groupId>org.apache.flink</groupId>
             <artifactId>flink-statebackend-rocksdb</artifactId>
             <version>${flink.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.awaitility</groupId>
+            <artifactId>awaitility</artifactId>
+            <version>${awaitility.version}</version>
             <scope>test</scope>
         </dependency>
     </dependencies>

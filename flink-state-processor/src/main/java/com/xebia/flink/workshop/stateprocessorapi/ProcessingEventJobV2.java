@@ -1,8 +1,10 @@
 package com.xebia.flink.workshop.stateprocessorapi;
 
 import com.xebia.flink.workshop.stateprocessorapi.model.ProcessingEvent;
+import com.xebia.flink.workshop.stateprocessorapi.model.StationReport;
 import com.xebia.flink.workshop.stateprocessorapi.model.StationStats;
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
+import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.api.common.functions.OpenContext;
 import org.apache.flink.api.common.state.MapState;
 import org.apache.flink.api.common.state.MapStateDescriptor;
@@ -30,17 +32,21 @@ public class ProcessingEventJobV2 {
                 .setDeserializer(KafkaRecordDeserializationSchema.valueOnly(new JsonDeserializationSchema<>(ProcessingEvent.class)))
                 .build();
 
-        env.fromSource(source, WatermarkStrategy.noWatermarks(), "processing-events")
-                .keyBy(e -> Tuple2.of(e.getLine(), e.getStation()), Types.TUPLE(Types.INT, Types.INT))
-                .process(new StationDurationTracker())
-                .uid("station-event-counter")
-                .name("station-event-counter")
-                .print();
+        DataStream<ProcessingEvent> events = env.fromSource(source, WatermarkStrategy.noWatermarks(), "processing-events");
+        buildPipeline(events).print();
 
         env.execute("ProcessingEventJobV2");
     }
 
-    static class StationDurationTracker extends KeyedProcessFunction<Tuple2<Integer, Integer>, ProcessingEvent, String> {
+    public static DataStream<StationReport> buildPipeline(DataStream<ProcessingEvent> events) {
+        return events
+                .keyBy(e -> Tuple2.of(e.getLine(), e.getStation()), Types.TUPLE(Types.INT, Types.INT))
+                .process(new StationDurationTracker())
+                .uid("station-event-counter")
+                .name("station-event-counter");
+    }
+
+    static class StationDurationTracker extends KeyedProcessFunction<Tuple2<Integer, Integer>, ProcessingEvent, StationReport> {
 
         private MapState<Long, Long> inProgress;
         private ValueState<StationStats> stationStats;
@@ -52,7 +58,7 @@ public class ProcessingEventJobV2 {
         }
 
         @Override
-        public void processElement(ProcessingEvent event, Context ctx, Collector<String> out)
+        public void processElement(ProcessingEvent event, Context ctx, Collector<StationReport> out)
                 throws Exception {
             if (event.getAction() == ProcessingEvent.Action.IN) {
                 inProgress.put(event.getUnitId(), event.getTimestamp().toEpochMilli());
@@ -75,9 +81,8 @@ public class ProcessingEventJobV2 {
                 stats.setMaxDurationMs(Math.max(stats.getMaxDurationMs(), durationMs));
                 stationStats.update(stats);
 
-                out.collect("Station (%d, %d) — units: %d, min: %d ms, max: %d ms"
-                        .formatted(event.getLine(), event.getStation(),
-                                stats.getUnitCount(), stats.getMinDurationMs(), stats.getMaxDurationMs()));
+                out.collect(new StationReport(event.getLine(), event.getStation(),
+                        stats.getUnitCount(), stats.getMinDurationMs(), stats.getMaxDurationMs()));
             }
         }
     }

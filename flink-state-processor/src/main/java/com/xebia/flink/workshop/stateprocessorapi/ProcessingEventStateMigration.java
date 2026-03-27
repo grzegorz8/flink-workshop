@@ -7,6 +7,7 @@ import org.apache.flink.api.common.state.ValueState;
 import org.apache.flink.api.common.state.ValueStateDescriptor;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.api.common.typeinfo.Types;
+import org.apache.flink.api.java.functions.KeySelector;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.state.api.OperatorIdentifier;
 import org.apache.flink.state.api.OperatorTransformation;
@@ -44,7 +45,10 @@ public class ProcessingEventStateMigration {
     public static void main(String[] args) throws Exception {
         String sourceSavepointPath = args.length > 0 ? args[0] : "/tmp/savepoints/v1";
         String targetSavepointPath = args.length > 1 ? args[1] : "/tmp/savepoints/v2";
+        migrate(sourceSavepointPath, targetSavepointPath);
+    }
 
+    public static void migrate(String sourceSavepointPath, String targetSavepointPath) throws Exception {
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
         env.setRuntimeMode(RuntimeExecutionMode.BATCH); // It has to be BATCH.
 
@@ -61,13 +65,20 @@ public class ProcessingEventStateMigration {
                         Types.TUPLE(Types.INT, Types.INT),
                         TypeInformation.of(StationKeyedState.class)
                 ))
-                .keyBy(ks -> ks.key, Types.TUPLE(Types.INT, Types.INT))
+                .keyBy(new KeySelector<StationKeyedState, Tuple2<Integer, Integer>>() {
+                    @Override
+                    public Tuple2<Integer, Integer> getKey(StationKeyedState ks) {
+                        return ks.key;
+                    }
+                }, Types.TUPLE(Types.INT, Types.INT))
                 .transform(new V2StateBootstrap());
 
         // Write a brand-new V2 savepoint — the "in-progress" map is intentionally left empty
         SavepointWriter.newSavepoint(env, stateBackend, 128)
                 .withOperator(operatorId, transformation)
                 .write(targetSavepointPath);
+
+        env.execute();
     }
 
     // -----------------------------------------------------------------------------------------
