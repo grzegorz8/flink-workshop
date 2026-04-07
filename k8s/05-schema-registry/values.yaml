@@ -1,0 +1,22 @@
+---
+kafka:
+  enabled: false
+
+externalKafka:
+  brokers:
+    - PLAINTEXT://rta-kafka-kafka-bootstrap.kafka.svc.cluster.local:9092
+  listener:
+    protocol: plaintext
+
+service:
+  type: LoadBalancer
+  ports:
+    http: 8091
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 100m
+    memory: 256Mi

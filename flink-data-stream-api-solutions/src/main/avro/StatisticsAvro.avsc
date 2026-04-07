@@ -1,0 +1,11 @@
+{
+  "type": "record",
+  "name": "StatisticsAvro",
+  "namespace": "com.xebia.flink.workshop.factorylines.model",
+  "fields": [
+    {"name": "line",        "type": "int"},
+    {"name": "windowStart", "type": {"type": "long", "logicalType": "timestamp-millis"}},
+    {"name": "windowEnd",   "type": {"type": "long", "logicalType": "timestamp-millis"}},
+    {"name": "count",       "type": "long"}
+  ]
+}

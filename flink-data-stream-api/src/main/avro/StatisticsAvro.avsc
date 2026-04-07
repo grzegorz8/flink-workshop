@@ -1,0 +1,7 @@
+{
+  "type": "record",
+  "name": "StatisticsAvro",
+  "namespace": "com.xebia.flink.workshop.factorylines.model",
+  "fields": [
+  ]
+}

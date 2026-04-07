@@ -89,7 +89,7 @@ class WindowingJob {
             for (Integer i : input) {
                 count += i;
             }
-            out.collect(new Statistics(window.getStart(), window.getEnd(), count));
+            out.collect(new Statistics(key, window.getStart(), window.getEnd(), count));
         }
     }
 
