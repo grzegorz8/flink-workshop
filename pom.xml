@@ -42,7 +42,7 @@ under the License.
         <maven.compiler.target>17</maven.compiler.target>
         <scala.binary.version>2.12</scala.binary.version>
 
-        <avro.version>1.12.1</avro.version>
+        <avro.version>1.11.4</avro.version>
         <flink-connector-kafka.version>4.0.1-2.0</flink-connector-kafka.version>
         <flink.version>2.0.1</flink.version>
         <jackson-datatype.version>2.21.0</jackson-datatype.version>
