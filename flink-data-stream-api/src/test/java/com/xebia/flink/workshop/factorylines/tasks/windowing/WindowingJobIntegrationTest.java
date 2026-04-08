@@ -9,6 +9,7 @@ import org.apache.flink.test.util.MiniClusterWithClientResource;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
@@ -44,6 +45,7 @@ class WindowingJobIntegrationTest {
         CollectSink.values.clear();
     }
 
+    @Disabled   // TODO remove when code is implemented
     @Test
     void shouldProduceOneResultForTwoUnitsOnSameLineInTheSameWindow() throws Exception {
         // given
@@ -68,6 +70,7 @@ class WindowingJobIntegrationTest {
         );
     }
 
+    @Disabled   // TODO remove when code is implemented
     @Test
     void shouldProduceTwoResultsForTwoUnitsInDifferentWindows() throws Exception {
         // given
@@ -104,6 +107,7 @@ class WindowingJobIntegrationTest {
         ));
     }
 
+    @Disabled   // TODO remove when code is implemented
     @Test
     void shouldProduceTwoResultsForTwoItemsOnDifferentLinesInSameWindow() throws Exception {
         // given
