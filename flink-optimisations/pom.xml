@@ -58,7 +58,6 @@
         <dependency>
             <groupId>com.linkedin.avroutil1</groupId>
             <artifactId>avro-fastserde</artifactId>
-            <version>0.4.38</version>
             <exclusions>
                 <!-- Let the project's own avro version win -->
                 <exclusion>
