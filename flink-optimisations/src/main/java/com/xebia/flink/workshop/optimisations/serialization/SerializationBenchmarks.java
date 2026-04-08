@@ -111,8 +111,6 @@ public class SerializationBenchmarks {
     @OperationsPerInvocation(value = RECORDS_PER_INVOCATION)
     public void serializerTuple(FlinkEnvironmentContext context) throws Exception {
         StreamExecutionEnvironment env = context.env;
-        SerializerConfigImpl serializerConfig = (SerializerConfigImpl) env.getConfig().getSerializerConfig();
-        serializerConfig.setForceAvro(true);
         env.setParallelism(4);
 
         DataGeneratorSource<Tuple9<Long, Long, Long, String, String, String, List<Tuple3<String, String, Long>>, Boolean, Boolean>> source = new DataGeneratorSource<>(
@@ -132,6 +130,8 @@ public class SerializationBenchmarks {
     @OperationsPerInvocation(value = RECORDS_PER_INVOCATION)
     public void serializerSpecificAvro(FlinkEnvironmentContext context) throws Exception {
         StreamExecutionEnvironment env = context.env;
+        SerializerConfigImpl serializerConfig = (SerializerConfigImpl) env.getConfig().getSerializerConfig();
+        serializerConfig.setForceAvro(true);
         env.setParallelism(4);
 
         DataGeneratorSource<EventAvro> source = new DataGeneratorSource<>(
