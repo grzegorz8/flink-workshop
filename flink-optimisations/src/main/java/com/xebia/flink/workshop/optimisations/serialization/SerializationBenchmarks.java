@@ -171,6 +171,25 @@ public class SerializationBenchmarks {
 
     @Benchmark
     @OperationsPerInvocation(value = RECORDS_PER_INVOCATION)
+    public void serializerFastAvro(FlinkEnvironmentContext context) throws Exception {
+        StreamExecutionEnvironment env = context.env;
+        env.setParallelism(4);
+
+        DataGeneratorSource<EventAvro> source = new DataGeneratorSource<>(
+                new AvroInputGenerator(),
+                RECORDS_PER_INVOCATION,
+                new FastAvroTypeInfo<>(EventAvro.class)
+        );
+
+        env.fromSource(source, WatermarkStrategy.noWatermarks(), "fast-avro-source")
+                .rebalance()
+                .sinkTo(new DiscardingSink<>());
+
+        env.execute();
+    }
+
+    @Benchmark
+    @OperationsPerInvocation(value = RECORDS_PER_INVOCATION)
     public void serializerKryo(FlinkEnvironmentContext context) throws Exception {
         StreamExecutionEnvironment env = context.env;
         env.setParallelism(4);

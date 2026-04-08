@@ -4,12 +4,13 @@
 
 ```
 Benchmark                                        Mode  Cnt     Score     Error   Units
-SerializationBenchmarks.serializerNonPojo       thrpt   14  1570,226 ± 46,713   ops/ms
-SerializationBenchmarks.serializerKryo          thrpt   14  2332,266 ± 190,776  ops/ms
-SerializationBenchmarks.serializerSpecificAvro  thrpt   14  6397,093 ± 300,013  ops/ms
-SerializationBenchmarks.serializerPojo          thrpt   14  6407,297 ± 144,839  ops/ms
-SerializationBenchmarks.serializerRecord        thrpt   14  7151,081 ± 259,583  ops/ms
-SerializationBenchmarks.serializerTuple         thrpt   14  8275,443 ± 257,095  ops/ms
+SerializationBenchmarks.serializerNonPojo       thrpt   14  1488,472 ±  82,360  ops/ms
+SerializationBenchmarks.serializerKryo          thrpt   14  2100,019 ±  79,787  ops/ms
+SerializationBenchmarks.serializerSpecificAvro  thrpt   14  4113,332 ± 113,524  ops/ms
+SerializationBenchmarks.serializerPojo          thrpt   14  5479,595 ± 450,590  ops/ms
+SerializationBenchmarks.serializerFastAvro      thrpt   14  6427,985 ±  75,054  ops/ms
+SerializationBenchmarks.serializerRecord        thrpt   14  6799,428 ± 155,529  ops/ms
+SerializationBenchmarks.serializerTuple         thrpt   14  7182,882 ± 125,685  ops/ms
 ```
 
 Is Java Record serialization really faster than POJO serialization? Under the hood, the same serializer (PojoSerializer)
