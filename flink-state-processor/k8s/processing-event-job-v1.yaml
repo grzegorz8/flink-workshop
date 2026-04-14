@@ -74,7 +74,7 @@ spec:
     s3.access-key: admin
     s3.endpoint: http://minio.s3.svc.cluster.local:9000
     s3.path.style.access: "true"
-    s3.secret-key: admin
+    s3.secret-key: adminpass
     state.backend.type: hashmap
     taskmanager.numberOfTaskSlots: "1"
     web.cancel.enable: "true"
