@@ -30,9 +30,10 @@ under the License.
         <module>flink-autoscaler</module>
         <module>flink-common</module>
         <module>flink-data-stream-api</module>
+        <module>flink-data-stream-api-solutions</module>
+        <module>flink-k8s-deployment</module>
         <module>flink-optimisations</module>
         <module>flink-state-processor</module>
-        <module>flink-data-stream-api-solutions</module>
     </modules>
 
     <properties>

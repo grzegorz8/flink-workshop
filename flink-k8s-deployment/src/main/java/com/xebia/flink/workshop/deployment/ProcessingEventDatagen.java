@@ -1,8 +1,10 @@
-package com.xebia.flink.workshop.stateprocessorapi;
+package com.xebia.flink.workshop.deployment;
 
 import com.xebia.flink.workshop.serde.JsonSerializationSchema;
-import com.xebia.flink.workshop.stateprocessorapi.model.ProcessingEvent;
+import com.xebia.flink.workshop.deployment.model.ProcessingEvent;
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
+import org.apache.flink.api.common.functions.OpenContext;
+import org.apache.flink.api.common.functions.RichMapFunction;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.api.connector.source.SourceReaderContext;
 import org.apache.flink.api.connector.source.util.ratelimit.RateLimiterStrategy;
@@ -11,6 +13,7 @@ import org.apache.flink.connector.datagen.source.GeneratorFunction;
 import org.apache.flink.connector.kafka.sink.KafkaRecordSerializationSchema;
 import org.apache.flink.connector.kafka.sink.KafkaSink;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
+import org.apache.flink.streaming.api.functions.co.CoMapFunction;
 import org.apache.flink.util.ParameterTool;
 
 import java.time.Instant;
@@ -46,6 +49,20 @@ public class ProcessingEventDatagen {
                 );
 
         env.execute("ProcessingEventDatagen");
+    }
+
+
+    static class XX implements CoMapFunction<String, Integer, String> {
+
+        @Override
+        public String map1(String value) {
+            return value;
+        }
+
+        @Override
+        public String map2(Integer value) {
+            return value.toString();
+        }
     }
 
     static class ProcessingEventGenerator implements GeneratorFunction<Long, ProcessingEvent> {

@@ -60,8 +60,7 @@ public class BusyJob {
                                 .setDeliveryGuarantee(DeliveryGuarantee.AT_LEAST_ONCE)
                                 .setBootstrapServers("rta-kafka-kafka-bootstrap.kafka.svc.cluster.local:9092")
                                 .setRecordSerializer(KafkaRecordSerializationSchema.<Event>builder()
-                                        .setValueSerializationSchema(new JsonSerializationSchema<Event>() {
-                                        })
+                                        .setValueSerializationSchema(new JsonSerializationSchema<>(Event.class))
                                         .setTopic("events2")
                                         .build())
                                 .build()

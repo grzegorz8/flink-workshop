@@ -16,27 +16,25 @@ two Flink jobs:
 
 ### Base scenario
 
-1. Build `flink-autoscaler` and `flink-datagen` projects.
+1. Build `flink-autoscaler` java artifact and deploy it to minio.
    ```bash
-   mvn clean package -pl flink-common,flink-datagen,flink-autoscaler
+   mvn clean deploy -pl flink-common,flink-autoscaler -s .mvn/minio-settings.xml
    ```
 
-2. Upload JARs to MinOI (`http://localhost:9090`, `flink` bucket).
-
-3. Run `BusyJob`.
+2. Run `BusyJob`.
     ```bash
-    kubectl apply -f k8s/05-flink/busy-job-deployment.yaml
+    kubectl apply -f flink-autoscaler/k8s/busy-job.yaml
     ```
 
-4. Start `DataGenerator` job.
+3. Start `DataGenerator` job.
    ```bash
-   kubectl apply -f k8s/05-flink/data-generator-deployment.yaml
+   kubectl apply -f flink-autoscaler/k8s/events-generator.yaml
    ```
 
-5. Observe `busy-job` deployment and Flink UI (`http://localhost:8087`). Monitor flink-operator logs. IN AKHQ (
+4. Observe `busy-job` deployment and [Flink UI](`http://localhost:8087`). Monitor flink-operator logs. In [AKHQ](
    `http://localhost:8089`) you can observe the number of events in input and output topic.
 
-6. Modify `records-per-second` parameter in `data-generator` deployment.
+5. Modify `records-per-second` parameter in `data-generator` deployment.
     ```yaml
     spec:
       job:
@@ -45,7 +43,7 @@ two Flink jobs:
           - "50.0"
     ```
 
-7. Observe flink-operator logs and `busy-job` deployment changes.
+6. Observe flink-operator logs and `busy-job` deployment changes.
 
 ### Possible modifications
 

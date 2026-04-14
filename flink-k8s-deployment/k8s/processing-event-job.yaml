@@ -1,0 +1,88 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: processing-event-job
+  namespace: flink
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: processing-event-job
+  namespace: flink
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: flink
+subjects:
+  - kind: ServiceAccount
+    name: processing-event-job
+    namespace: flink
+---
+apiVersion: flink.apache.org/v1beta1
+kind: FlinkDeployment
+metadata:
+  name: processing-event-job
+  namespace: flink
+spec:
+  flinkVersion: v2_0
+  image: flink:2.0.1-scala_2.12-java17
+  imagePullPolicy: IfNotPresent
+  serviceAccount: processing-event-job
+  job:
+    jarURI: s3://flink/flink-k8s-deployment-1.0.jar
+    entryClass: com.xebia.flink.workshop.deployment.ProcessingEventJob
+    upgradeMode: savepoint
+    state: running
+    parallelism: 1
+  jobManager:
+    replicas: 1
+    resource:
+      cpu: 0.5
+      memory: 1024m
+  taskManager:
+    resource:
+      cpu: 0.5
+      memory: 1024m
+  podTemplate:
+    apiVersion: v1
+    kind: Pod
+    metadata:
+      name: processing-event-job-pod-template
+    spec:
+      containers:
+        - name: flink-main-container
+          ports:
+            - containerPort: 9249
+              name: metrics
+          env:
+            - name: ENABLE_BUILT_IN_PLUGINS
+              value: "flink-s3-fs-presto-2.0.1.jar"
+            - name: AWS_JAVA_V1_DISABLE_DEPRECATION_ANNOUNCEMENT
+              value: "true"
+  flinkConfiguration:
+    rest.bind-port: "8084"
+    execution.checkpointing.dir: "s3://flink/processing-event-job/checkpoints/"
+    execution.checkpointing.interval: 60s
+    execution.checkpointing.timeout: 1h
+    execution.checkpointing.min-pause: 60s
+    execution.checkpointing.savepoint-dir: "s3://flink/processing-event-job/savepoints/"
+    high-availability.storageDir: "s3://flink/processing-event-job/high-availability/"
+    high-availability.type: kubernetes
+    kubernetes.rest-service.exposed.type: LoadBalancer
+    metrics.reporter.prom.factory.class: org.apache.flink.metrics.prometheus.PrometheusReporterFactory
+    s3.access-key: admin
+    s3.endpoint: http://minio.s3.svc.cluster.local:9000
+    s3.path.style.access: "true"
+    s3.secret-key: adminpass
+    state.backend.type: hashmap
+    taskmanager.numberOfTaskSlots: "1"
+    web.cancel.enable: "true"
+    web.submit.enable: "true"
+    restart-strategy.type: exponential-delay
+    restart-strategy.exponential-delay.initial-backoff: 60s
+    restart-strategy.exponential-delay.max-backoff: 2h
+    restart-strategy.exponential-delay.backoff-multiplier: "2"
+    restart-strategy.exponential-delay.jitter-factor: "0.1"
+    restart-strategy.exponential-delay.reset-backoff-threshold: 24h
+    restart-strategy.exponential-delay.attempts-before-reset-backoff: "2147483647"

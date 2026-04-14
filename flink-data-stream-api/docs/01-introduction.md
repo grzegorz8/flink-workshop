@@ -12,6 +12,6 @@ every second.
 
 There are two data streams being collected:
 
-- `ProcessingEvent`s - a stream of events indicating when a unit enters or leaves a processing station. This means that
+- `ProcessingEvents` - a stream of events indicating when a unit enters or leaves a processing station. This means that
   for each unit there are `2S` processing events (`S` IN actions and `S` OUT actions).
 - `SensorReadings` - a stream of sensor readings. Typically, there is one event per line per station per second.

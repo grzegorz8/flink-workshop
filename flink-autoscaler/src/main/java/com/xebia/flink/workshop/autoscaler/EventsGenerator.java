@@ -42,7 +42,7 @@ public class EventsGenerator {
                         KafkaSink.<Event>builder()
                                 .setBootstrapServers("rta-kafka-kafka-bootstrap.kafka.svc.cluster.local:9092")
                                 .setRecordSerializer(KafkaRecordSerializationSchema.<Event>builder()
-                                        .setValueSerializationSchema(new JsonSerializationSchema<>())
+                                        .setValueSerializationSchema(new JsonSerializationSchema<>(Event.class))
                                         .setTopic("events")
                                         .build())
                                 .build()

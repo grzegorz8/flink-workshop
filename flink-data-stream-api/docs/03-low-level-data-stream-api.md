@@ -48,17 +48,22 @@ public abstract class KeyedProcessFunction<K, I, O>
     ```java
     public abstract void processElement(I value, Context ctx, Collector<O> out);
     ```
-- **states** - a custom context related to a given key that is stored in state. State is bound to given key!
+- **states** - a custom context related to a given key that is stored in state. State is bound to given key! There are a
+  few state types: `ValueState`, `MapState` and `ListState`.
     ```java
     private transient ValueState<Long> myState;
 
     Long myValue = myState.value();
+    
+    private transient MapState<String, Long> myMapState;
+  
+    Long myKeyedValue = myMapState.get("some-key");
     ```
-  There are a few state types: `ValueState`, `MapState` and `ListState`.
 - **timers** - a callback registered at given timestamp, which allows to take deferred actions in the future. Timer is
   bound to given key!
     ```java
     ctx.timerService().registerEventTimeTimer(timestamp);
+    ctx.timerService().deleteEventTimeTimer(timestamp);
     ```
 
 ---
@@ -130,7 +135,6 @@ Key observations when using `KeyedProcessFunction`.
 - We can imagine that events with the same key are processed by the same thread sequentially. No need to worry about
   concurrency!
 - Flink takes advantage of this locality – state related with given key is kept on the same machine.
--
 
 <img src="images/KeyedProcessFunction.png" alt="drawing" width="1080"/>
 
@@ -233,8 +237,6 @@ private void processBufferedEvents(long timestamp,
 ---
 
 **Version 3** - Timer Coalescing
-
-**TODO: Skip Version 3. Timer coalesce can be discussed further**
 
 Flink maintains only one timer per key and timestamp, so you can reduce the number of timers by reducing the timer
 resolution to coalesce them.
