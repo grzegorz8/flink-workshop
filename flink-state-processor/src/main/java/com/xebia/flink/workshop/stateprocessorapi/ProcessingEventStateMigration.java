@@ -21,30 +21,13 @@ import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.util.Collector;
 
 /**
- * Offline state migration from V1 to V2.
- *
- * <p>Reads the V1 savepoint and produces a new V2 savepoint with evolved state:
- * <ul>
- *   <li>V1 state: {@code ValueState<Long>} "unit-count"</li>
- *   <li>V2 state: {@code ValueState<StationStats>} "station-stats" — unitCount is carried
- *       over from V1; duration fields are initialised to 0 and will accumulate from the point
- *       of migration onwards.</li>
- * </ul>
- *
- * <p>In-flight units present at migration time (i.e., units whose Action.IN has been seen but
- * Action.OUT has not yet arrived) are lost. V2 will simply ignore their Action.OUT events
- * because no arrival timestamp will be found in the empty "in-progress" map.
- *
- * <p>Usage:
- * <pre>
- *   java -cp ... ProcessingEventStateMigration /tmp/savepoints/v1 /tmp/savepoints/v2
- * </pre>
+ * Offline state migration from V1 to V2. Reads the V1 savepoint and produces a new V2 savepoint with evolved state.
  */
 public class ProcessingEventStateMigration {
 
     public static void main(String[] args) throws Exception {
-        String sourceSavepointPath = args.length > 0 ? args[0] : "/tmp/savepoints/v1";
-        String targetSavepointPath = args.length > 1 ? args[1] : "/tmp/savepoints/v2";
+        String sourceSavepointPath = args.length > 0 ? args[0] : "/tmp/savepoints/v1/";
+        String targetSavepointPath = args.length > 1 ? args[1] : "/tmp/savepoints/v2/";
         migrate(sourceSavepointPath, targetSavepointPath);
     }
 

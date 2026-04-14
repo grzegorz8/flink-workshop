@@ -78,20 +78,20 @@ class StateMigrationIntegrationTest {
     }
 
     @Test
-    void test() throws Exception {
+    void jobV2ShouldStartWithMigratedSavepoint() throws Exception {
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
         env.setParallelism(1);
 
         // --- PHASE 1 - Run ProcessingEventJobV1
         sendMessages(List.of(
                 event(0, 0, ProcessingEvent.Action.IN),
-                event(0, 0, ProcessingEvent.Action.OUT),   // → "Station (0, 0) — processed units: 1"
+                event(0, 0, ProcessingEvent.Action.OUT),   // -> "Station (0, 0) - processed units: 1"
                 event(0, 1, ProcessingEvent.Action.IN),
-                event(0, 1, ProcessingEvent.Action.OUT),   // → "Station (0, 1) — processed units: 1"
+                event(0, 1, ProcessingEvent.Action.OUT),   // -> "Station (0, 1) - processed units: 1"
                 event(0, 0, ProcessingEvent.Action.IN),
-                event(0, 0, ProcessingEvent.Action.OUT),   // → "Station (0, 0) — processed units: 2"
+                event(0, 0, ProcessingEvent.Action.OUT),   // -> "Station (0, 0) - processed units: 2"
                 event(0, 1, ProcessingEvent.Action.IN),
-                event(0, 1, ProcessingEvent.Action.OUT)    // → "Station (0, 1) — processed units: 2"
+                event(0, 1, ProcessingEvent.Action.OUT)    // -> "Station (0, 1) - processed units: 2"
         ));
 
         DataStream<ProcessingEvent> sourceV1 = env.fromSource(buildKafkaSource("test", OffsetsInitializer.earliest()), WatermarkStrategy.noWatermarks(), "source");
@@ -103,19 +103,20 @@ class StateMigrationIntegrationTest {
         await().atMost(Duration.ofSeconds(30)).until(() -> jobClientV1.getJobStatus().get() == JobStatus.RUNNING);
         await().atMost(Duration.ofSeconds(30)).until(() -> CollectSinkV1.values.size() >= 2);
 
+        // --- PHASE 2 - Stop ProcessingEventJobV1 with savepoint
         String savepointPathV1 = jobClientV1
                 .stopWithSavepoint(false, tempDir.toString(), SavepointFormatType.CANONICAL)
                 .get(30, TimeUnit.SECONDS);
         log.info("V1 savepoint: {}", savepointPathV1);
         log.info("V1 results:   {}", CollectSinkV1.values);
 
-        // -- PHASE 2 - Migrate savepoint state using State Processor API
+        // -- PHASE 3 - Migrate savepoint state using State Processor API
         String savepointPathV2 = tempDir.resolve("savepoint-v2").toString();
         ProcessingEventStateMigration.migrate(savepointPathV1, savepointPathV2);
         assertTrue(Files.exists(Path.of(savepointPathV2)), "Migrated savepoint directory should exist");
         log.info("Migrated savepoint: {}", savepointPathV2);
 
-        // -- PHASE 3 - Start JobV2 from migrated savepoint, push new messages, await results
+        // -- PHASE 4 - Start JobV2 from migrated savepoint, push new messages, await results
         Configuration configV2 = new Configuration();
         configV2.set(StateRecoveryOptions.SAVEPOINT_PATH, savepointPathV2);
         StreamExecutionEnvironment env2 = StreamExecutionEnvironment.getExecutionEnvironment(configV2);
@@ -131,11 +132,11 @@ class StateMigrationIntegrationTest {
 
         sendMessages(List.of(
                 event(0, 0, ProcessingEvent.Action.IN),
-                event(0, 0, ProcessingEvent.Action.OUT),   // → StationReport(line=0, station=0, unitCount=3, ...) (count carried over from V1)
+                event(0, 0, ProcessingEvent.Action.OUT),   // -> StationReport(line=0, station=0, unitCount=3, ...) (count carried over from V1)
                 event(0, 1, ProcessingEvent.Action.IN),
-                event(0, 1, ProcessingEvent.Action.OUT),   // → StationReport(line=0, station=1, unitCount=3, ...) (count carried over from V1)
+                event(0, 1, ProcessingEvent.Action.OUT),   // -> StationReport(line=0, station=1, unitCount=3, ...) (count carried over from V1)
                 event(0, 0, ProcessingEvent.Action.IN),
-                event(0, 0, ProcessingEvent.Action.OUT),   // → StationReport(line=0, station=0, unitCount=4, ...) (count carried over from V1)
+                event(0, 0, ProcessingEvent.Action.OUT),   // -> StationReport(line=0, station=0, unitCount=4, ...) (count carried over from V1)
                 event(0, 1, ProcessingEvent.Action.IN)
         ));
 
