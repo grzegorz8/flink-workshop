@@ -6,12 +6,15 @@
     <parent>
         <groupId>com.xebia.flink</groupId>
         <artifactId>flink-workshop</artifactId>
-        <version>0.12</version>
+        <version>1.0</version>
     </parent>
     <artifactId>flink-autoscaler</artifactId>
 
     <properties>
         <main.class>com.xebia.flink.workshop.autoscaler.BusyJob</main.class>
+        <maven.deploy.skip>true</maven.deploy.skip>
+        <minio.endpoint>http://localhost:9000</minio.endpoint>
+        <minio.bucket>flink</minio.bucket>
     </properties>
 
     <dependencies>
@@ -81,6 +84,37 @@
                                     <mainClass>com.xebia.flink.workshop.autoscaler.BusyJob</mainClass>
                                 </transformer>
                             </transformers>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <version>3.1.0</version>
+                <executions>
+                    <execution>
+                        <id>upload-to-minio</id>
+                        <phase>deploy</phase>
+                        <goals>
+                            <goal>exec</goal>
+                        </goals>
+                        <configuration>
+                            <executable>aws</executable>
+                            <arguments>
+                                <argument>s3</argument>
+                                <argument>cp</argument>
+                                <argument>${project.build.directory}/${project.build.finalName}.jar</argument>
+                                <argument>s3://${minio.bucket}/${project.build.finalName}.jar</argument>
+                                <argument>--endpoint-url</argument>
+                                <argument>${minio.endpoint}</argument>
+                            </arguments>
+                            <environmentVariables>
+                                <AWS_ACCESS_KEY_ID>admin</AWS_ACCESS_KEY_ID>
+                                <AWS_SECRET_ACCESS_KEY>adminpass</AWS_SECRET_ACCESS_KEY>
+                                <AWS_DEFAULT_REGION>us-east-1</AWS_DEFAULT_REGION>
+                            </environmentVariables>
                         </configuration>
                     </execution>
                 </executions>

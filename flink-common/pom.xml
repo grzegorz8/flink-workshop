@@ -6,9 +6,13 @@
     <parent>
         <groupId>com.xebia.flink</groupId>
         <artifactId>flink-workshop</artifactId>
-        <version>0.12</version>
+        <version>1.0</version>
     </parent>
     <artifactId>flink-common</artifactId>
+
+    <properties>
+        <maven.deploy.skip>true</maven.deploy.skip>
+    </properties>
 
     <dependencies>
         <dependency>

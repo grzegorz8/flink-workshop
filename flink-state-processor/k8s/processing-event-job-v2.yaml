@@ -30,7 +30,7 @@ spec:
   imagePullPolicy: IfNotPresent
   serviceAccount: processing-event-job-v2
   job:
-    jarURI: s3://flink/flink-state-processor-0.12.jar
+    jarURI: s3://flink/flink-state-processor-1.0.jar
     entryClass: com.xebia.flink.workshop.stateprocessorapi.ProcessingEventJobV2
     upgradeMode: savepoint
     state: running

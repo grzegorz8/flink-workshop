@@ -30,7 +30,7 @@ spec:
   imagePullPolicy: IfNotPresent
   serviceAccount: events-generator
   job:
-    jarURI: s3://flink/flink-autoscaler-0.12.jar
+    jarURI: s3://flink/flink-autoscaler-1.0.jar
     entryClass: com.xebia.flink.workshop.autoscaler.EventsGenerator
     upgradeMode: savepoint
     state: running
