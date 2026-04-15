@@ -4,27 +4,20 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.xebia.flink.workshop.stateprocessorapi.model.ProcessingEvent;
 import com.xebia.flink.workshop.stateprocessorapi.model.StationCount;
-import com.xebia.flink.workshop.stateprocessorapi.model.StationStats;
+import com.xebia.flink.workshop.stateprocessorapi.model.StationReport;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.flink.api.common.JobStatus;
-import org.apache.flink.api.common.RuntimeExecutionMode;
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
-import org.apache.flink.api.common.typeinfo.TypeHint;
-import org.apache.flink.api.common.typeinfo.TypeInformation;
-import org.apache.flink.api.java.tuple.Tuple2;
-import org.apache.flink.client.program.ClusterClient;
+import org.apache.flink.configuration.Configuration;
+import org.apache.flink.configuration.StateRecoveryOptions;
 import org.apache.flink.connector.file.src.FileSource;
 import org.apache.flink.connector.file.src.reader.TextLineInputFormat;
 import org.apache.flink.core.execution.JobClient;
 import org.apache.flink.core.execution.SavepointFormatType;
 import org.apache.flink.runtime.testutils.MiniClusterResourceConfiguration;
-import org.apache.flink.state.table.SavepointTypeInformationFactory;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
-import org.apache.flink.streaming.api.functions.sink.legacy.SinkFunction;
-import org.apache.flink.table.api.EnvironmentSettings;
-import org.apache.flink.table.api.TableEnvironment;
-import org.apache.flink.table.api.TableResult;
+import org.apache.flink.streaming.api.functions.sink.SinkFunction;
 import org.apache.flink.test.util.MiniClusterWithClientResource;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -48,15 +41,19 @@ import static org.awaitility.Awaitility.await;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @Slf4j
-public class StateMITest {
+public class ProcessingEventStateMigrationTest {
 
     private static final ObjectMapper MAPPER = new ObjectMapper()
             .registerModule(new JavaTimeModule())
             .disable(WRITE_DATES_AS_TIMESTAMPS);
 
     private static MiniClusterWithClientResource flinkCluster;
-    private static ClusterClient<?> clusterClient;
 
+    private final SavepointInspector savepointInspector = new SavepointInspector(
+            "test-source", "parsing", "station-event-counter", "station-event-counter-v2", "sink");
+
+    @TempDir
+    private Path inputDir;
     @TempDir
     private Path savepointDir;
     @TempDir
@@ -68,9 +65,9 @@ public class StateMITest {
                 new MiniClusterResourceConfiguration.Builder()
                         .setNumberSlotsPerTaskManager(2)
                         .setNumberTaskManagers(1)
-                        .build());
+                        .build()
+        );
         flinkCluster.before();
-        clusterClient = flinkCluster.getClusterClient();
     }
 
     @AfterAll
@@ -79,15 +76,20 @@ public class StateMITest {
     }
 
     @Test
-    void should() throws Exception {
-        // streaming environment
-        // File containing test data
-        File inputFile = Files.createTempFile("input-file", ".txt").toFile();
-        inputFile.deleteOnExit();
-
-
+    void shouldStartJobV2FromMigratedSavepoint() throws Exception {
         // PHASE 1 - Run Job V1
-        writeEvents(inputFile, List.of(
+        JobClient jobClientV1 = phaseOne_StartJobV1();
+        // PHASE 2 - Stop job V1 with savepoint
+        String savepointPathV1 = phaseTwo_StopJobV1WithSavepoint(jobClientV1);
+        // PHASE 3 - Migrate savepoint state using State Processor API
+        String savepointPathV2 = phaseThree_MigrateSavepoint(savepointPathV1);
+        // PHASE 4 - Start JobV2 from migrated savepoint, push new messages, await results
+        phaseFour_StartJobV2FromMigratedSavepoint(savepointPathV2);
+    }
+
+    private JobClient phaseOne_StartJobV1() throws Exception {
+        File inputFile1 = inputDir.resolve("input-file-1.txt").toFile();
+        writeEvents(inputFile1, List.of(
                 event(0, 0, ProcessingEvent.Action.IN),
                 event(0, 0, ProcessingEvent.Action.OUT),   // -> "Station (0, 0) - processed units: 1"
                 event(0, 1, ProcessingEvent.Action.IN),
@@ -100,10 +102,9 @@ public class StateMITest {
 
         StreamExecutionEnvironment env1 = StreamExecutionEnvironment.getExecutionEnvironment();
         env1.setParallelism(1);
-        env1.setRuntimeMode(RuntimeExecutionMode.STREAMING);
 
         DataStream<ProcessingEvent> source = env1.fromSource(
-                        FileSource.forRecordStreamFormat(new TextLineInputFormat(), org.apache.flink.core.fs.Path.fromLocalFile(inputFile))
+                        FileSource.forRecordStreamFormat(new TextLineInputFormat(), org.apache.flink.core.fs.Path.fromLocalFile(inputDir.toFile()))
                                 .monitorContinuously(Duration.ofMillis(200))
                                 .build(),
                         WatermarkStrategy.noWatermarks(),
@@ -113,27 +114,71 @@ public class StateMITest {
 
         ProcessingEventJobV1
                 .buildPipeline(source)
-                .addSink(new CollectSinkV1()).uid("sink-v1");
+                .addSink(new CollectSinkV1()).uid("sink");
 
         JobClient jobClientV1 = env1.executeAsync("ProcessingEventJobV1-test");
         await().atMost(Duration.ofSeconds(30)).until(() -> jobClientV1.getJobStatus().get() == JobStatus.RUNNING);
         await().atMost(Duration.ofSeconds(30)).until(() -> CollectSinkV1.values.size() >= 3);
         log.info("V1 results:   {}", CollectSinkV1.values);
+        return jobClientV1;
+    }
 
-        // PHASE 2 - Stop job V1 with savepoint
+    private String phaseTwo_StopJobV1WithSavepoint(JobClient jobClientV1) throws Exception {
         String savepointPathV1 = jobClientV1
                 .stopWithSavepoint(false, savepointDir.toString(), SavepointFormatType.CANONICAL)
                 .get(30, TimeUnit.SECONDS);
         log.info("V1 savepoint: {}", savepointPathV1);
-        //inspectSavepoint("V1", savepointPathV1);
-        env1.close();
+        savepointInspector.inspect("V1", savepointPathV1);
+        return savepointPathV1;
+    }
 
-        // PHASE 3 - Migrate savepoint state using State Processor API
+    private String phaseThree_MigrateSavepoint(String savepointPathV1) throws Exception {
         String savepointPathV2 = savepointV2Dir.toString();
         log.info("Migrated savepoint: {}", savepointPathV2);
         ProcessingEventStateMigration.migrate(savepointPathV1, savepointPathV2);
         assertTrue(Files.exists(Path.of(savepointPathV2)), "Migrated savepoint directory should exist");
-        //inspectSavepoint("V2", savepointPathV2);
+        savepointInspector.inspect("V2", savepointPathV2);
+        return savepointPathV2;
+    }
+
+    private void phaseFour_StartJobV2FromMigratedSavepoint(String savepointPathV2) throws Exception {
+        Configuration configV2 = new Configuration();
+        configV2.set(StateRecoveryOptions.SAVEPOINT_PATH, savepointPathV2);
+        configV2.set(StateRecoveryOptions.SAVEPOINT_IGNORE_UNCLAIMED_STATE, true);
+        StreamExecutionEnvironment env2 = StreamExecutionEnvironment.getExecutionEnvironment(configV2);
+        env2.setParallelism(1);
+
+        DataStream<ProcessingEvent> sourceV2 = env2.fromSource(
+                        FileSource.forRecordStreamFormat(new TextLineInputFormat(), org.apache.flink.core.fs.Path.fromLocalFile(inputDir.toFile()))
+                                .monitorContinuously(Duration.ofMillis(200))
+                                .build(),
+                        WatermarkStrategy.noWatermarks(),
+                        "test-source"
+                ).uid("test-source")
+                .map(line -> MAPPER.readValue(line, ProcessingEvent.class)).uid("parsing");
+
+        ProcessingEventJobV2
+                .buildPipeline(sourceV2)
+                .addSink(new CollectSinkV2()).uid("sink");
+
+        JobClient jobClient = env2.executeAsync("ProcessingEventJobV2-test");
+        await().atMost(Duration.ofSeconds(30)).until(() -> jobClient.getJobStatus().get(30, TimeUnit.SECONDS).equals(JobStatus.RUNNING));
+
+        File inputFile2 = inputDir.resolve("input-file-2.txt").toFile();
+        writeEvents(inputFile2, List.of(
+                event(0, 0, ProcessingEvent.Action.IN),
+                event(0, 0, ProcessingEvent.Action.OUT),   // -> StationReport(line=0, station=0, unitCount=3, ...) (count carried over from V1)
+                event(0, 1, ProcessingEvent.Action.IN),
+                event(0, 1, ProcessingEvent.Action.OUT),   // -> StationReport(line=0, station=1, unitCount=3, ...) (count carried over from V1)
+                event(0, 0, ProcessingEvent.Action.IN),
+                event(0, 0, ProcessingEvent.Action.OUT),   // -> StationReport(line=0, station=0, unitCount=4, ...) (count carried over from V1)
+                event(0, 1, ProcessingEvent.Action.IN)
+        ));
+
+        await().atMost(Duration.ofSeconds(30)).until(() -> CollectSinkV2.values.size() >= 3);
+        jobClient.cancel().get(30, TimeUnit.SECONDS);
+
+        log.info("V2 results: {}", CollectSinkV2.values);
     }
 
     private void writeEvents(File file, List<ProcessingEvent> events) throws IOException {
@@ -155,51 +200,6 @@ public class StateMITest {
         return e;
     }
 
-    private static void inspectSavepoint(String label, String savepointPath) {
-        log.info("=== Inspecting {} savepoint: {} ===", label, savepointPath);
-        TableEnvironment tableEnv = TableEnvironment.create(EnvironmentSettings.inBatchMode());
-        tableEnv.executeSql("LOAD MODULE state");
-
-        TableResult metadataResult = tableEnv.executeSql(
-                "SELECT * FROM savepoint_metadata('" + savepointPath + "')");
-        log.info("{} savepoint metadata:", label);
-        metadataResult.print();
-
-        // Inspect keyed state for station-event-counter* operators
-        if ("V1".equals(label)) {
-            tableEnv.executeSql(
-                    "CREATE TABLE station_event_counter (" +
-                            "  k ROW<f0 INTEGER, f1 INTEGER>," +
-                            "  `unit-count` BIGINT," +
-                            "  PRIMARY KEY (k) NOT ENFORCED" +
-                            ") WITH (" +
-                            "  'connector' = 'savepoint'," +
-                            "  'state.backend.type' = 'hashmap'," +
-                            "  'state.path' = '" + savepointPath + "'," +
-                            "  'operator.uid' = 'station-event-counter'," +
-                            "  'fields.k.value-type-factory' = '" + Tuple2IntIntTypeFactory.class.getName() + "'" +
-                            ")");
-            log.info("{} keyed state (station-event-counter):", label);
-            tableEnv.executeSql("SELECT * FROM station_event_counter").print();
-        } else {
-            tableEnv.executeSql(
-                    "CREATE TABLE station_event_counter_v2 (" +
-                            "  k ROW<f0 INTEGER, f1 INTEGER>," +
-                            "  `station-stats` ROW<unitCount BIGINT, minDurationMs BIGINT, maxDurationMs BIGINT>," +
-                            "  `in-progress` MAP<BIGINT, BIGINT>," +
-                            "  PRIMARY KEY (k) NOT ENFORCED" +
-                            ") WITH (" +
-                            "  'connector' = 'savepoint'," +
-                            "  'state.backend.type' = 'hashmap'," +
-                            "  'state.path' = '" + savepointPath + "'," +
-                            "  'operator.uid' = 'station-event-counter-v2'," +
-                            "  'fields.k.value-type-factory' = '" + Tuple2IntIntTypeFactory.class.getName() + "'," +
-                            "  'fields.station-stats.value-type-factory' = '" + StationStatsTypeFactory.class.getName() + "'" +
-                            ")");
-            log.info("{} keyed state (station-event-counter-v2):", label);
-            tableEnv.executeSql("SELECT * FROM station_event_counter_v2").print();
-        }
-    }
 
     @SuppressWarnings("deprecation")
     static class CollectSinkV1 implements SinkFunction<StationCount> {
@@ -212,18 +212,15 @@ public class StateMITest {
         }
     }
 
-    public static class Tuple2IntIntTypeFactory implements SavepointTypeInformationFactory {
+    @SuppressWarnings("deprecation")
+    static class CollectSinkV2 implements SinkFunction<StationReport> {
+
+        static final List<StationReport> values = Collections.synchronizedList(new ArrayList<>());
+
         @Override
-        public TypeInformation<?> getTypeInformation() {
-            return TypeInformation.of(new TypeHint<Tuple2<Integer, Integer>>() {
-            });
+        public void invoke(StationReport value, Context context) {
+            values.add(value);
         }
     }
 
-    public static class StationStatsTypeFactory implements SavepointTypeInformationFactory {
-        @Override
-        public TypeInformation<?> getTypeInformation() {
-            return TypeInformation.of(StationStats.class);
-        }
-    }
 }

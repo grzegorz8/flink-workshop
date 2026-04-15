@@ -3,6 +3,7 @@ package com.xebia.flink.workshop.stateprocessorapi;
 import com.xebia.flink.workshop.stateprocessorapi.model.ProcessingEvent;
 import com.xebia.flink.workshop.stateprocessorapi.model.StationReport;
 import com.xebia.flink.workshop.stateprocessorapi.model.StationStats;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
 import org.apache.flink.api.common.functions.OpenContext;
 import org.apache.flink.api.common.state.MapState;
@@ -20,6 +21,7 @@ import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.api.functions.KeyedProcessFunction;
 import org.apache.flink.util.Collector;
 
+@Slf4j
 public class ProcessingEventJobV2 {
 
     public static void main(String[] args) throws Exception {
@@ -62,6 +64,7 @@ public class ProcessingEventJobV2 {
         @Override
         public void processElement(ProcessingEvent event, Context ctx, Collector<StationReport> out)
                 throws Exception {
+            log.debug("Processing event {}", event);
             if (event.getAction() == ProcessingEvent.Action.IN) {
                 inProgress.put(event.getUnitId(), event.getTimestamp().toEpochMilli());
             } else {
@@ -83,8 +86,11 @@ public class ProcessingEventJobV2 {
                 stats.setMaxDurationMs(Math.max(stats.getMaxDurationMs(), durationMs));
                 stationStats.update(stats);
 
-                out.collect(new StationReport(event.getLine(), event.getStation(),
-                        stats.getUnitCount(), stats.getMinDurationMs(), stats.getMaxDurationMs()));
+
+                StationReport stationReport = new StationReport(event.getLine(), event.getStation(),
+                        stats.getUnitCount(), stats.getMinDurationMs(), stats.getMaxDurationMs());
+                log.debug("Emitting station report: {}", stationReport);
+                out.collect(stationReport);
             }
         }
     }

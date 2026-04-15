@@ -3,10 +3,7 @@ package com.xebia.flink.workshop.stateprocessorapi;
 import com.xebia.flink.workshop.stateprocessorapi.model.StationStats;
 import org.apache.flink.api.common.RuntimeExecutionMode;
 import org.apache.flink.api.common.functions.OpenContext;
-import org.apache.flink.api.common.state.MapState;
 import org.apache.flink.api.common.state.ValueState;
-import org.apache.flink.api.common.state.ValueStateDescriptor;
-import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.api.common.typeinfo.Types;
 import org.apache.flink.api.java.functions.KeySelector;
 import org.apache.flink.api.java.tuple.Tuple2;
@@ -19,12 +16,10 @@ import org.apache.flink.state.api.SavepointWriter;
 import org.apache.flink.state.api.StateBootstrapTransformation;
 import org.apache.flink.state.api.functions.KeyedStateBootstrapFunction;
 import org.apache.flink.state.api.functions.KeyedStateReaderFunction;
-
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.util.Collector;
 
 import static com.xebia.flink.workshop.stateprocessorapi.ProcessingEventJobV1.StationUnitCounter.unitCountStateDescriptor;
-import static com.xebia.flink.workshop.stateprocessorapi.ProcessingEventJobV2.StationDurationTracker.inProgressStateDescriptor;
 import static com.xebia.flink.workshop.stateprocessorapi.ProcessingEventJobV2.StationDurationTracker.stationStatsValueStateDescriptor;
 
 /**
@@ -43,6 +38,7 @@ public class ProcessingEventStateMigration {
         env.setRuntimeMode(RuntimeExecutionMode.BATCH); // It has to be BATCH.
 
         OperatorIdentifier operatorId = OperatorIdentifier.forUid("station-event-counter");
+        OperatorIdentifier operatorIdV2 = OperatorIdentifier.forUid("station-event-counter-v2");
 
         // Read V1 unit counts from the existing savepoint
         SavepointReader reader = SavepointReader.read(env, sourceSavepointPath);
@@ -57,12 +53,13 @@ public class ProcessingEventStateMigration {
                 }, Types.TUPLE(Types.INT, Types.INT))
                 .transform(new V2StateBootstrap());
 
-//        SavepointWriter.fromExistingSavepoint(env, sourceSavepointPath, new HashMapStateBackend())
-//                .withOperator(operatorIdV2, transformation)
-//                .write(targetSavepointPath);
-        SavepointWriter.newSavepoint(env, 120)
-                .withOperator(operatorId, transformation)
+        SavepointWriter.fromExistingSavepoint(env, sourceSavepointPath, new HashMapStateBackend())
+                .withOperator(operatorIdV2, transformation)
+                .removeOperator(operatorId)
                 .write(targetSavepointPath);
+//        SavepointWriter.newSavepoint(env, 120)
+//                .withOperator(operatorId, transformation)
+//                .write(targetSavepointPath);
 
         env.execute();
     }
@@ -77,7 +74,7 @@ public class ProcessingEventStateMigration {
         private ValueState<Long> unitCount;
 
         @Override
-        public void open(OpenContext ctx) {
+        public void open(Configuration configuration) {
             unitCount = getRuntimeContext().getState(unitCountStateDescriptor);
         }
 
