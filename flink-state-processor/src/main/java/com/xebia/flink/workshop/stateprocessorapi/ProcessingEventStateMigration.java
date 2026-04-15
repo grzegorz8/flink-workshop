@@ -3,12 +3,15 @@ package com.xebia.flink.workshop.stateprocessorapi;
 import com.xebia.flink.workshop.stateprocessorapi.model.StationStats;
 import org.apache.flink.api.common.RuntimeExecutionMode;
 import org.apache.flink.api.common.functions.OpenContext;
+import org.apache.flink.api.common.state.MapState;
 import org.apache.flink.api.common.state.ValueState;
 import org.apache.flink.api.common.state.ValueStateDescriptor;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.api.common.typeinfo.Types;
 import org.apache.flink.api.java.functions.KeySelector;
 import org.apache.flink.api.java.tuple.Tuple2;
+import org.apache.flink.configuration.Configuration;
+import org.apache.flink.runtime.state.hashmap.HashMapStateBackend;
 import org.apache.flink.state.api.OperatorIdentifier;
 import org.apache.flink.state.api.OperatorTransformation;
 import org.apache.flink.state.api.SavepointReader;
@@ -17,9 +20,12 @@ import org.apache.flink.state.api.StateBootstrapTransformation;
 import org.apache.flink.state.api.functions.KeyedStateBootstrapFunction;
 import org.apache.flink.state.api.functions.KeyedStateReaderFunction;
 
-import org.apache.flink.state.rocksdb.EmbeddedRocksDBStateBackend;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.util.Collector;
+
+import static com.xebia.flink.workshop.stateprocessorapi.ProcessingEventJobV1.StationUnitCounter.unitCountStateDescriptor;
+import static com.xebia.flink.workshop.stateprocessorapi.ProcessingEventJobV2.StationDurationTracker.inProgressStateDescriptor;
+import static com.xebia.flink.workshop.stateprocessorapi.ProcessingEventJobV2.StationDurationTracker.stationStatsValueStateDescriptor;
 
 /**
  * Offline state migration from V1 to V2. Reads the V1 savepoint and produces a new V2 savepoint with evolved state.
@@ -37,18 +43,12 @@ public class ProcessingEventStateMigration {
         env.setRuntimeMode(RuntimeExecutionMode.BATCH); // It has to be BATCH.
 
         OperatorIdentifier operatorId = OperatorIdentifier.forUid("station-event-counter");
-        OperatorIdentifier operatorIdV2 = OperatorIdentifier.forUid("station-event-counter-v2");
 
         // Read V1 unit counts from the existing savepoint
         SavepointReader reader = SavepointReader.read(env, sourceSavepointPath);
 
         StateBootstrapTransformation<StationKeyedState> transformation = OperatorTransformation
-                .bootstrapWith(reader.readKeyedState(
-                        operatorId,
-                        new V1StateReader(),
-                        Types.TUPLE(Types.INT, Types.INT),
-                        TypeInformation.of(StationKeyedState.class)
-                ))
+                .bootstrapWith(reader.readKeyedState(operatorId, new V1StateReader()))
                 .keyBy(new KeySelector<StationKeyedState, Tuple2<Integer, Integer>>() {
                     @Override
                     public Tuple2<Integer, Integer> getKey(StationKeyedState ks) {
@@ -57,10 +57,11 @@ public class ProcessingEventStateMigration {
                 }, Types.TUPLE(Types.INT, Types.INT))
                 .transform(new V2StateBootstrap());
 
-        // Write a brand-new V2 savepoint — the "in-progress" map is intentionally left empty
-        SavepointWriter.fromExistingSavepoint(env, sourceSavepointPath, new EmbeddedRocksDBStateBackend())
-                .removeOperator(operatorId)
-                .withOperator(operatorIdV2, transformation)
+//        SavepointWriter.fromExistingSavepoint(env, sourceSavepointPath, new HashMapStateBackend())
+//                .withOperator(operatorIdV2, transformation)
+//                .write(targetSavepointPath);
+        SavepointWriter.newSavepoint(env, 120)
+                .withOperator(operatorId, transformation)
                 .write(targetSavepointPath);
 
         env.execute();
@@ -77,7 +78,7 @@ public class ProcessingEventStateMigration {
 
         @Override
         public void open(OpenContext ctx) {
-            unitCount = getRuntimeContext().getState(new ValueStateDescriptor<>("unit-count", Types.LONG));
+            unitCount = getRuntimeContext().getState(unitCountStateDescriptor);
         }
 
         @Override
@@ -98,7 +99,7 @@ public class ProcessingEventStateMigration {
 
         @Override
         public void open(OpenContext ctx) {
-            stationStats = getRuntimeContext().getState(new ValueStateDescriptor<>("station-stats", TypeInformation.of(StationStats.class)));
+            stationStats = getRuntimeContext().getState(stationStatsValueStateDescriptor);
         }
 
         @Override

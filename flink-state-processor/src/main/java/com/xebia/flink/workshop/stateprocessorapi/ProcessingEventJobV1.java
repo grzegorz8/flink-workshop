@@ -44,11 +44,12 @@ public class ProcessingEventJobV1 {
 
     static class StationUnitCounter extends KeyedProcessFunction<Tuple2<Integer, Integer>, ProcessingEvent, StationCount> {
 
+        static final ValueStateDescriptor<Long> unitCountStateDescriptor = new ValueStateDescriptor<>("unit-count", Types.LONG);
         private ValueState<Long> unitCount;
 
         @Override
         public void open(OpenContext ctx) {
-            unitCount = getRuntimeContext().getState(new ValueStateDescriptor<>("unit-count", Types.LONG));
+            unitCount = getRuntimeContext().getState(unitCountStateDescriptor);
         }
 
         @Override

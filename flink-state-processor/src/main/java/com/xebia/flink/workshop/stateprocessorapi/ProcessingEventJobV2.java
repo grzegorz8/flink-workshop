@@ -4,7 +4,6 @@ import com.xebia.flink.workshop.stateprocessorapi.model.ProcessingEvent;
 import com.xebia.flink.workshop.stateprocessorapi.model.StationReport;
 import com.xebia.flink.workshop.stateprocessorapi.model.StationStats;
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
-import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.api.common.functions.OpenContext;
 import org.apache.flink.api.common.state.MapState;
 import org.apache.flink.api.common.state.MapStateDescriptor;
@@ -16,6 +15,7 @@ import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.connector.kafka.source.KafkaSource;
 import org.apache.flink.connector.kafka.source.reader.deserializer.KafkaRecordDeserializationSchema;
 import org.apache.flink.formats.json.JsonDeserializationSchema;
+import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.api.functions.KeyedProcessFunction;
 import org.apache.flink.util.Collector;
@@ -42,19 +42,21 @@ public class ProcessingEventJobV2 {
         return events
                 .keyBy(e -> Tuple2.of(e.getLine(), e.getStation()), Types.TUPLE(Types.INT, Types.INT))
                 .process(new StationDurationTracker())
-                .uid("station-event-counter-v2")
-                .name("station-event-counter-v2");
+                .uid("station-event-counter")
+                .name("station-event-counter");
     }
 
     static class StationDurationTracker extends KeyedProcessFunction<Tuple2<Integer, Integer>, ProcessingEvent, StationReport> {
 
+        static final ValueStateDescriptor<StationStats> stationStatsValueStateDescriptor = new ValueStateDescriptor<>("station-stats", TypeInformation.of(StationStats.class));
+        static final MapStateDescriptor<Long, Long> inProgressStateDescriptor = new MapStateDescriptor<>("in-progress", Types.LONG, Types.LONG);
         private MapState<Long, Long> inProgress;
         private ValueState<StationStats> stationStats;
 
         @Override
         public void open(OpenContext ctx) {
-            inProgress = getRuntimeContext().getMapState(new MapStateDescriptor<>("in-progress", Types.LONG, Types.LONG));
-            stationStats = getRuntimeContext().getState(new ValueStateDescriptor<>("station-stats", TypeInformation.of(StationStats.class)));
+            inProgress = getRuntimeContext().getMapState(inProgressStateDescriptor);
+            stationStats = getRuntimeContext().getState(stationStatsValueStateDescriptor);
         }
 
         @Override
