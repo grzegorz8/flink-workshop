@@ -26,7 +26,7 @@ metadata:
   namespace: flink
 spec:
   flinkVersion: v2_0
-  image: flink:2.0.1-scala_2.12-java17
+  image: flink:2.2.0-scala_2.12-java17
   imagePullPolicy: IfNotPresent
   serviceAccount: processing-event-datagen
   job:
@@ -60,7 +60,7 @@ spec:
               name: metrics
           env:
             - name: ENABLE_BUILT_IN_PLUGINS
-              value: "flink-s3-fs-presto-2.0.1.jar"
+              value: "flink-s3-fs-presto-2.2.0.jar"
             - name: AWS_JAVA_V1_DISABLE_DEPRECATION_ANNOUNCEMENT
               value: "true"
   flinkConfiguration:

@@ -73,7 +73,7 @@ Minikube-based setup with Helm-deployed components:
 
 ## Tech Stack
 
-- **Java 17**, **Apache Flink 2.0.1**, Scala binary 2.12
+- **Java 17**, **Apache Flink 2.2.0**, Scala binary 2.12
 - **Kafka connector** 4.0.1-2.0, **Avro** 1.12.1
 - **JUnit 5**, **JMH** 1.37, **Lombok**, **Jackson**
 

@@ -46,7 +46,7 @@ under the License.
         <avro-fastserde.version>0.4.38</avro-fastserde.version>
         <avro.version>1.11.4</avro.version>
         <flink-connector-kafka.version>4.0.1-2.0</flink-connector-kafka.version>
-        <flink.version>2.0.1</flink.version>
+        <flink.version>2.2.0</flink.version>
         <jackson-datatype.version>2.21.0</jackson-datatype.version>
         <jmh.version>1.37</jmh.version>
         <log4j.version>2.24.3</log4j.version>
