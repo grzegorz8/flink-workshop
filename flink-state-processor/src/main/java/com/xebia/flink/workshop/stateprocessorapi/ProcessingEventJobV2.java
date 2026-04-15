@@ -42,8 +42,8 @@ public class ProcessingEventJobV2 {
         return events
                 .keyBy(e -> Tuple2.of(e.getLine(), e.getStation()), Types.TUPLE(Types.INT, Types.INT))
                 .process(new StationDurationTracker())
-                .uid("station-event-counter")
-                .name("station-event-counter");
+                .uid("station-event-counter-v2")
+                .name("station-event-counter-v2");
     }
 
     static class StationDurationTracker extends KeyedProcessFunction<Tuple2<Integer, Integer>, ProcessingEvent, StationReport> {

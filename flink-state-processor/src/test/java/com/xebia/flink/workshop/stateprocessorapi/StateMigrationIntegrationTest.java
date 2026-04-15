@@ -5,14 +5,21 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.xebia.flink.workshop.stateprocessorapi.model.ProcessingEvent;
 import com.xebia.flink.workshop.stateprocessorapi.model.StationCount;
 import com.xebia.flink.workshop.stateprocessorapi.model.StationReport;
+import com.xebia.flink.workshop.stateprocessorapi.model.StationStats;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.flink.api.common.JobStatus;
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
 import org.apache.flink.api.common.serialization.DeserializationSchema;
+import org.apache.flink.api.common.typeinfo.TypeHint;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
+import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.configuration.StateRecoveryOptions;
 import org.apache.flink.connector.kafka.source.KafkaSource;
+import org.apache.flink.table.api.EnvironmentSettings;
+import org.apache.flink.table.api.TableEnvironment;
+import org.apache.flink.table.api.TableResult;
+import org.apache.flink.state.table.SavepointTypeInformationFactory;
 import org.apache.flink.connector.kafka.source.enumerator.initializer.OffsetsInitializer;
 import org.apache.flink.connector.kafka.source.reader.deserializer.KafkaRecordDeserializationSchema;
 import org.apache.flink.core.execution.JobClient;
@@ -110,11 +117,17 @@ class StateMigrationIntegrationTest {
         log.info("V1 savepoint: {}", savepointPathV1);
         log.info("V1 results:   {}", CollectSinkV1.values);
 
+        // --- PHASE 2b - Inspect V1 savepoint contents using SQL
+        inspectSavepoint("V1", savepointPathV1);
+
         // -- PHASE 3 - Migrate savepoint state using State Processor API
         String savepointPathV2 = tempDir.resolve("savepoint-v2").toString();
         ProcessingEventStateMigration.migrate(savepointPathV1, savepointPathV2);
         assertTrue(Files.exists(Path.of(savepointPathV2)), "Migrated savepoint directory should exist");
         log.info("Migrated savepoint: {}", savepointPathV2);
+
+        // --- PHASE 3b - Inspect migrated V2 savepoint contents using SQL
+        inspectSavepoint("V2", savepointPathV2);
 
         // -- PHASE 4 - Start JobV2 from migrated savepoint, push new messages, await results
         Configuration configV2 = new Configuration();
@@ -122,7 +135,7 @@ class StateMigrationIntegrationTest {
         StreamExecutionEnvironment env2 = StreamExecutionEnvironment.getExecutionEnvironment(configV2);
         env2.setParallelism(1);
 
-        DataStream<ProcessingEvent> sourceV2 = env2.fromSource(buildKafkaSource("test", OffsetsInitializer.latest()), WatermarkStrategy.noWatermarks(), "source");
+        DataStream<ProcessingEvent> sourceV2 = env2.fromSource(buildKafkaSource("test", OffsetsInitializer.earliest()), WatermarkStrategy.noWatermarks(), "source");
         ProcessingEventJobV2
                 .buildPipeline(sourceV2)
                 .addSink(new CollectSinkV2());
@@ -191,6 +204,52 @@ class StateMigrationIntegrationTest {
         return e;
     }
 
+    private static void inspectSavepoint(String label, String savepointPath) {
+        log.info("=== Inspecting {} savepoint: {} ===", label, savepointPath);
+        TableEnvironment tableEnv = TableEnvironment.create(EnvironmentSettings.inBatchMode());
+        tableEnv.executeSql("LOAD MODULE state");
+
+        TableResult metadataResult = tableEnv.executeSql(
+                "SELECT * FROM savepoint_metadata('" + savepointPath + "')");
+        log.info("{} savepoint metadata:", label);
+        metadataResult.print();
+
+        // Inspect keyed state for station-event-counter* operators
+        if ("V1".equals(label)) {
+            tableEnv.executeSql(
+                    "CREATE TABLE station_event_counter (" +
+                            "  k ROW<f0 INTEGER, f1 INTEGER>," +
+                            "  `unit-count` BIGINT," +
+                            "  PRIMARY KEY (k) NOT ENFORCED" +
+                            ") WITH (" +
+                            "  'connector' = 'savepoint'," +
+                            "  'state.backend.type' = 'hashmap'," +
+                            "  'state.path' = '" + savepointPath + "'," +
+                            "  'operator.uid' = 'station-event-counter'," +
+                            "  'fields.k.value-type-factory' = '" + Tuple2IntIntTypeFactory.class.getName() + "'" +
+                            ")");
+            log.info("{} keyed state (station-event-counter):", label);
+            tableEnv.executeSql("SELECT * FROM station_event_counter").print();
+        } else {
+            tableEnv.executeSql(
+                    "CREATE TABLE station_event_counter_v2 (" +
+                            "  k ROW<f0 INTEGER, f1 INTEGER>," +
+                            "  `station-stats` ROW<unitCount BIGINT, minDurationMs BIGINT, maxDurationMs BIGINT>," +
+                            "  `in-progress` MAP<BIGINT, BIGINT>," +
+                            "  PRIMARY KEY (k) NOT ENFORCED" +
+                            ") WITH (" +
+                            "  'connector' = 'savepoint'," +
+                            "  'state.backend.type' = 'hashmap'," +
+                            "  'state.path' = '" + savepointPath + "'," +
+                            "  'operator.uid' = 'station-event-counter-v2'," +
+                            "  'fields.k.value-type-factory' = '" + Tuple2IntIntTypeFactory.class.getName() + "'," +
+                            "  'fields.station-stats.value-type-factory' = '" + StationStatsTypeFactory.class.getName() + "'" +
+                            ")");
+            log.info("{} keyed state (station-event-counter-v2):", label);
+            tableEnv.executeSql("SELECT * FROM station_event_counter_v2").print();
+        }
+    }
+
     static class ProcessingEventDeserializationSchema implements DeserializationSchema<ProcessingEvent> {
 
         private static final ObjectMapper MAPPER = new ObjectMapper()
@@ -232,6 +291,20 @@ class StateMigrationIntegrationTest {
         @Override
         public void invoke(StationReport value, Context context) {
             values.add(value);
+        }
+    }
+
+    public static class Tuple2IntIntTypeFactory implements SavepointTypeInformationFactory {
+        @Override
+        public TypeInformation<?> getTypeInformation() {
+            return TypeInformation.of(new TypeHint<Tuple2<Integer, Integer>>() {});
+        }
+    }
+
+    public static class StationStatsTypeFactory implements SavepointTypeInformationFactory {
+        @Override
+        public TypeInformation<?> getTypeInformation() {
+            return TypeInformation.of(StationStats.class);
         }
     }
 }

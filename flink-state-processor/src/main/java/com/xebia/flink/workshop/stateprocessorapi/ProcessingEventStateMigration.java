@@ -16,6 +16,7 @@ import org.apache.flink.state.api.SavepointWriter;
 import org.apache.flink.state.api.StateBootstrapTransformation;
 import org.apache.flink.state.api.functions.KeyedStateBootstrapFunction;
 import org.apache.flink.state.api.functions.KeyedStateReaderFunction;
+
 import org.apache.flink.state.rocksdb.EmbeddedRocksDBStateBackend;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.util.Collector;
@@ -35,11 +36,11 @@ public class ProcessingEventStateMigration {
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
         env.setRuntimeMode(RuntimeExecutionMode.BATCH); // It has to be BATCH.
 
-        EmbeddedRocksDBStateBackend stateBackend = new EmbeddedRocksDBStateBackend();
         OperatorIdentifier operatorId = OperatorIdentifier.forUid("station-event-counter");
+        OperatorIdentifier operatorIdV2 = OperatorIdentifier.forUid("station-event-counter-v2");
 
         // Read V1 unit counts from the existing savepoint
-        SavepointReader reader = SavepointReader.read(env, sourceSavepointPath, stateBackend);
+        SavepointReader reader = SavepointReader.read(env, sourceSavepointPath);
 
         StateBootstrapTransformation<StationKeyedState> transformation = OperatorTransformation
                 .bootstrapWith(reader.readKeyedState(
@@ -57,25 +58,18 @@ public class ProcessingEventStateMigration {
                 .transform(new V2StateBootstrap());
 
         // Write a brand-new V2 savepoint — the "in-progress" map is intentionally left empty
-        SavepointWriter.newSavepoint(env, stateBackend, 128)
-                .withOperator(operatorId, transformation)
+        SavepointWriter.fromExistingSavepoint(env, sourceSavepointPath, new EmbeddedRocksDBStateBackend())
+                .removeOperator(operatorId)
+                .withOperator(operatorIdV2, transformation)
                 .write(targetSavepointPath);
 
         env.execute();
     }
 
-    // -----------------------------------------------------------------------------------------
-    // Transfer object
-    // -----------------------------------------------------------------------------------------
-
     public static class StationKeyedState {
         public Tuple2<Integer, Integer> key;
         public long unitCount;
     }
-
-    // -----------------------------------------------------------------------------------------
-    // Reader: extracts V1 ValueState<Long> "unit-count"
-    // -----------------------------------------------------------------------------------------
 
     static class V1StateReader extends KeyedStateReaderFunction<Tuple2<Integer, Integer>, StationKeyedState> {
 
@@ -97,10 +91,6 @@ public class ProcessingEventStateMigration {
             }
         }
     }
-
-    // -----------------------------------------------------------------------------------------
-    // Bootstrap: writes V2 ValueState<StationStats> "station-stats"
-    // -----------------------------------------------------------------------------------------
 
     static class V2StateBootstrap extends KeyedStateBootstrapFunction<Tuple2<Integer, Integer>, StationKeyedState> {
 
