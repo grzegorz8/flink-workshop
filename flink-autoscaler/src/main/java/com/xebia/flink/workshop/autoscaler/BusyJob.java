@@ -44,7 +44,7 @@ public class BusyJob {
                                 .setDeserializer(KafkaRecordDeserializationSchema.<Event>valueOnly(new JsonDeserializationSchema<>(Event.class)))
                                 .setTopics("events")
                                 .build(),
-                        WatermarkStrategy.noWatermarks(),
+                        WatermarkStrategy.forMonotonousTimestamps(),
                         "events"
                 )
                 .keyBy(Event::getId)

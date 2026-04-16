@@ -21,15 +21,15 @@ two Flink jobs:
    mvn clean deploy -pl flink-common,flink-autoscaler -s .mvn/minio-settings.xml
    ```
 
-2. Run `BusyJob`.
-    ```bash
-    kubectl apply -f flink-autoscaler/k8s/busy-job.yaml
-    ```
-
-3. Start `DataGenerator` job.
+2. Start `DataGenerator` job.
    ```bash
    kubectl apply -f flink-autoscaler/k8s/events-generator.yaml
    ```
+
+3. Run `BusyJob`.
+    ```bash
+    kubectl apply -f flink-autoscaler/k8s/busy-job.yaml
+    ```
 
 4. Observe `busy-job` deployment and [Flink UI](`http://localhost:8087`). Monitor flink-operator logs. In [AKHQ](
    `http://localhost:8089`) you can observe the number of events in input and output topic.

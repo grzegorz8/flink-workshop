@@ -85,6 +85,6 @@ grafana:
 
   sidecar:
     dashboards:
-      enabled: false
+      enabled: true
     datasources:
       enabled: true

@@ -25,3 +25,19 @@ spec:
         values:
           - jobmanager
           - taskmanager
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: flink-operator
+  namespace: flink-operator
+spec:
+  namespaceSelector:
+    matchNames:
+      - flink-operator
+  podMetricsEndpoints:
+    - interval: 15s
+      port: metrics
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: flink-kubernetes-operator

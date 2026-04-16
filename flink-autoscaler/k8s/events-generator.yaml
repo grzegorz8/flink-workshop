@@ -65,6 +65,7 @@ spec:
               value: "true"
   flinkConfiguration:
     rest.bind-port: "8082"
+    rest.port: "8082"
     execution.checkpointing.dir: "s3://flink/events-generator/checkpoints/"
     execution.checkpointing.interval: 60s
     execution.checkpointing.timeout: 1h

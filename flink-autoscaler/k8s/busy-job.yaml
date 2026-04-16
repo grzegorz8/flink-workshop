@@ -30,7 +30,7 @@ spec:
   imagePullPolicy: IfNotPresent
   serviceAccount: busy-job
   job:
-    jarURI: s3://flink/busy-job-0.1.jar
+    jarURI: s3://flink/flink-autoscaler-1.0.jar
     entryClass: com.xebia.flink.workshop.autoscaler.BusyJob
     upgradeMode: savepoint
     state: running
@@ -62,6 +62,7 @@ spec:
               value: "true"
   flinkConfiguration:
     rest.bind-port: 8087
+    rest.port: 8087
     execution.checkpointing.dir: "s3://flink/busy-job/checkpoints/"
     execution.checkpointing.interval: 60s
     execution.checkpointing.timeout: 1h

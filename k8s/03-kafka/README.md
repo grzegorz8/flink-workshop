@@ -7,13 +7,18 @@
 
 2. Install [strimzi](https://strimzi.io/quickstarts/) operator.
     ```bash
-    kubectl create -f 'https://strimzi.io/install/latest?namespace=kafka' -n kafka
+    helm repo add strimzi https://strimzi.io/charts/
+    helm repo update
+    helm install strimzi-operator strimzi/strimzi-kafka-operator \
+    --namespace kafka \
+    --create-namespace
     ```
 
 3. Create Kafka cluster.
    ```bash
-   kubectl create -f 'https://strimzi.io/install/latest?namespace=kafka' -n kafka
+   kubectl apply -f k8s/03-kafka/kafka-cluster.yaml
     ```
+
 4. Verify that the strimzi operator and Kafka cluster are up and running.
     ```bash
     kubectl get pods -n kafka
