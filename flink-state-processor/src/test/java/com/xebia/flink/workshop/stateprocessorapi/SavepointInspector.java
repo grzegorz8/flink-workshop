@@ -1,12 +1,16 @@
 package com.xebia.flink.workshop.stateprocessorapi;
 
 import lombok.extern.slf4j.Slf4j;
+import org.apache.flink.api.common.RuntimeExecutionMode;
 import org.apache.flink.runtime.checkpoint.Checkpoints;
 import org.apache.flink.runtime.checkpoint.OperatorState;
 import org.apache.flink.runtime.checkpoint.OperatorSubtaskState;
 import org.apache.flink.runtime.checkpoint.metadata.CheckpointMetadata;
 import org.apache.flink.runtime.jobgraph.OperatorID;
 import org.apache.flink.state.api.OperatorIdentifier;
+import org.apache.flink.state.api.SavepointReader;
+import org.apache.flink.state.api.functions.KeyedStateReaderFunction;
+import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 
 import java.io.BufferedInputStream;
 import java.io.DataInputStream;
@@ -15,6 +19,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -22,12 +27,19 @@ import java.util.Map;
 class SavepointInspector {
 
     private final Map<OperatorID, String> nameByOperatorId;
+    private final Map<OperatorID, RegisteredReader<?>> keyedStateReaders = new LinkedHashMap<>();
 
     SavepointInspector(String... uids) {
         nameByOperatorId = new HashMap<>();
         for (String uid : uids) {
             nameByOperatorId.put(OperatorIdentifier.forUid(uid).getOperatorId(), uid);
         }
+    }
+
+    <K> SavepointInspector withKeyedStateReader(String uid, KeyedStateReaderFunction<K, String> reader) {
+        keyedStateReaders.put(OperatorIdentifier.forUid(uid).getOperatorId(),
+                new RegisteredReader<>(OperatorIdentifier.forUid(uid), reader));
+        return this;
     }
 
     void inspect(String label, String savepointPath) throws Exception {
@@ -69,6 +81,42 @@ class SavepointInspector {
                         op.getSubtaskStates().size(), managedKeyed, rawKeyed, managedOp, rawOp, formatSize(totalBytes)));
             }
             log.info(sb.toString());
+
+            // Print keyed state contents for operators with registered readers
+            for (OperatorState op : operators) {
+                RegisteredReader<?> registered = keyedStateReaders.get(op.getOperatorID());
+                if (registered != null && !op.getSubtaskStates().isEmpty()) {
+                    String uid = nameByOperatorId.getOrDefault(op.getOperatorID(), op.getOperatorID().toString().substring(0, 8));
+                    readAndLogKeyedState(label, uid, savepointPath, registered);
+                }
+            }
+        }
+    }
+
+    private <K> void readAndLogKeyedState(String label, String uid, String savepointPath,
+            RegisteredReader<K> registered) throws Exception {
+        StreamExecutionEnvironment batchEnv = StreamExecutionEnvironment.getExecutionEnvironment();
+        batchEnv.setRuntimeMode(RuntimeExecutionMode.BATCH);
+
+        List<String> entries = SavepointReader.read(batchEnv, savepointPath)
+                .readKeyedState(registered.operatorId, registered.reader)
+                .executeAndCollect("inspect-keyed-state-" + uid, 10_000);
+
+        StringBuilder sb = new StringBuilder();
+        sb.append(String.format("%n[%s/%s] keyed state (%d entries):%n", label, uid, entries.size()));
+        for (String entry : entries) {
+            sb.append("  ").append(entry).append("\n");
+        }
+        log.info(sb.toString());
+    }
+
+    private static class RegisteredReader<K> {
+        final OperatorIdentifier operatorId;
+        final KeyedStateReaderFunction<K, String> reader;
+
+        RegisteredReader(OperatorIdentifier operatorId, KeyedStateReaderFunction<K, String> reader) {
+            this.operatorId = operatorId;
+            this.reader = reader;
         }
     }
 

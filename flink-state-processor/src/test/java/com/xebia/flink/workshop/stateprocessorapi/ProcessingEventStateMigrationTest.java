@@ -5,9 +5,12 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.xebia.flink.workshop.stateprocessorapi.model.ProcessingEvent;
 import com.xebia.flink.workshop.stateprocessorapi.model.StationCount;
 import com.xebia.flink.workshop.stateprocessorapi.model.StationReport;
+import com.xebia.flink.workshop.stateprocessorapi.model.StationStats;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.flink.api.common.JobStatus;
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
+import org.apache.flink.api.common.state.ValueState;
+import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.configuration.StateRecoveryOptions;
 import org.apache.flink.connector.file.src.FileSource;
@@ -15,10 +18,12 @@ import org.apache.flink.connector.file.src.reader.TextLineInputFormat;
 import org.apache.flink.core.execution.JobClient;
 import org.apache.flink.core.execution.SavepointFormatType;
 import org.apache.flink.runtime.testutils.MiniClusterResourceConfiguration;
+import org.apache.flink.state.api.functions.KeyedStateReaderFunction;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.api.functions.sink.SinkFunction;
 import org.apache.flink.test.util.MiniClusterWithClientResource;
+import org.apache.flink.util.Collector;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -50,7 +55,9 @@ public class ProcessingEventStateMigrationTest {
     private static MiniClusterWithClientResource flinkCluster;
 
     private final SavepointInspector savepointInspector = new SavepointInspector(
-            "test-source", "parsing", "station-event-counter", "station-event-counter-v2", "sink");
+            "test-source", "parsing", "station-event-counter", "station-event-counter-v2", "sink")
+            .withKeyedStateReader("station-event-counter", new V1UnitCountReader())
+            .withKeyedStateReader("station-event-counter-v2", new V2StationStatsReader());
 
     @TempDir
     private Path inputDir;
@@ -220,6 +227,42 @@ public class ProcessingEventStateMigrationTest {
         @Override
         public void invoke(StationReport value, Context context) {
             values.add(value);
+        }
+    }
+
+    static class V1UnitCountReader extends KeyedStateReaderFunction<Tuple2<Integer, Integer>, String> {
+
+        private ValueState<Long> unitCount;
+
+        @Override
+        public void open(Configuration configuration) {
+            unitCount = getRuntimeContext().getState(ProcessingEventJobV1.StationUnitCounter.unitCountStateDescriptor);
+        }
+
+        @Override
+        public void readKey(Tuple2<Integer, Integer> key, Context ctx, Collector<String> out) throws Exception {
+            Long count = unitCount.value();
+            if (count != null) {
+                out.collect(String.format("station(%d,%d) -> unitCount=%d", key.f0, key.f1, count));
+            }
+        }
+    }
+
+    static class V2StationStatsReader extends KeyedStateReaderFunction<Tuple2<Integer, Integer>, String> {
+
+        private ValueState<StationStats> stationStats;
+
+        @Override
+        public void open(Configuration configuration) {
+            stationStats = getRuntimeContext().getState(ProcessingEventJobV2.StationDurationTracker.stationStatsValueStateDescriptor);
+        }
+
+        @Override
+        public void readKey(Tuple2<Integer, Integer> key, Context ctx, Collector<String> out) throws Exception {
+            StationStats stats = stationStats.value();
+            if (stats != null) {
+                out.collect(String.format("station(%d,%d) -> %s", key.f0, key.f1, stats));
+            }
         }
     }
 
