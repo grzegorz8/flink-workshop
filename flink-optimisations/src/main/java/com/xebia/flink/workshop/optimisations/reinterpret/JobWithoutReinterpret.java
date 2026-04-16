@@ -19,7 +19,7 @@ public class JobWithoutReinterpret extends JobBase {
 
         DataGeneratorSource<Event> source = new DataGeneratorSource<>(
                 new InputGenerator(),
-                Integer.MAX_VALUE,
+                Long.MAX_VALUE,
                 TypeInformation.of(Event.class)
         );
 

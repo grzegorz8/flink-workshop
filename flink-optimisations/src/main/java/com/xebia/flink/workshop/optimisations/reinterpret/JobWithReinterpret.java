@@ -18,13 +18,13 @@ public class JobWithReinterpret extends JobBase {
         env.setParallelism(3);
         // TODO: toggle object reuse config
         env.getConfig().disableObjectReuse();
-        // env.getConfig().enableObjectReuse();
+//         env.getConfig().enableObjectReuse();
         SerializerConfigImpl serializerConfig = (SerializerConfigImpl) env.getConfig().getSerializerConfig();
         serializerConfig.registerPojoType(Event.class);
 
         DataGeneratorSource<Event> source = new DataGeneratorSource<>(
                 new InputGenerator(),
-                Integer.MAX_VALUE,
+                Long.MAX_VALUE,
                 TypeInformation.of(Event.class)
         );
 

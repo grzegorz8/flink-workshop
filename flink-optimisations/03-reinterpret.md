@@ -57,7 +57,10 @@ Run `JobWithoutReinterpret.java` and open `http://localhost:8083` (Flink UI) in 
 
 Most of the time, the job is deserializing incoming events and serializing outgoing events.
 
+[flamegraph_without_reinterpret.html](images/flamegraph_without_reinterpret.html)
+
 ![flamegraph_no_reinterpret.png](images/flamegraph_no_reinterpret.png)
+
 
 ---
 
@@ -67,6 +70,8 @@ Run `JobWithReinterpret.java` and open `http://localhost:8083` (Flink UI) in you
 
 Most of the time, the job is deserializing incoming events and cloning events between operators within the task.
 
+[flamegraph_with_reinterpret.html](images/flamegraph_with_reinterpret.html)
+
 ![flamegraph_reinterpret.png](images/flamegraph_reinterpret.png)
 
 ---
@@ -74,5 +79,7 @@ Most of the time, the job is deserializing incoming events and cloning events be
 **Flamegraph - reinterpret + object reuse**
 
 With object reuse, the vast majority of time is spent on deserialization.
+
+[flamegraph_with_reinterpret_with_object_reuse.html](images/flamegraph_with_reinterpret_with_object_reuse.html)
 
 ![flamegraph_reinterpret_object_reuse.png](images/flamegraph_reinterpret_object_reuse.png)

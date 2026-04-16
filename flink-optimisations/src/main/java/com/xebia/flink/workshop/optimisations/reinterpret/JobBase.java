@@ -22,6 +22,7 @@ abstract class JobBase {
         final Configuration configuration = new Configuration();
         configuration.set(PipelineOptions.GENERIC_TYPES, false);
         configuration.setString("rest.flamegraph.enabled", "true");
+        configuration.setString("rest.profiling.enabled", "true");
         return configuration;
     }
 
