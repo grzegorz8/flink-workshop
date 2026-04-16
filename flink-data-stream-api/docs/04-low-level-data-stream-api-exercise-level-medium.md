@@ -1,0 +1,101 @@
+# Low-level DataStream API
+
+## Introduction to KeyedCoProcessFunction
+
+`KeyedCoProcessFunction` is similar to a `KeyedProcessFunction` but it consumes two data stream inputs.
+
+```java
+/**
+ * @param <K> Type of the key.
+ * @param <IN1> Type of the first input.
+ * @param <IN2> Type of the second input.
+ * @param <OUT> Output type.
+ */
+public abstract class KeyedCoProcessFunction<K, IN1, IN2, OUT>
+```
+
+```java
+public static void main() {
+    streamOne
+            .keyBy(e -> e.getId())
+            .connect(streamTwo.keyBy(e -> e.getId()))
+            .process(new MyCoProcessFunction())
+            .sinkTo(mySink);
+}
+```
+
+## Exercise 2: Factory lines - energy consumption aggregation (KeyedCoProcessFunction)
+
+**Goal:** Implement a streaming job that, for each unit, calculates the total energy consumed during assembly.
+
+Possible output message:
+
+```json
+{
+  "unitId": 1001,
+  "line": 1,
+  "energyConsumption": 120.4
+}
+```
+
+### Hint 1 - job overview
+
+You can implement the job in the following way:
+
+1. Two sources: `ProcessingEvents` and `SensorReadings`.
+2. Join processing events with sensor readings and calculate required statistics. To this end, station processing events
+   and sensor readings should be keyed by `(line, station)`, then connect them and apply your custom
+   `KeyedCoProcessFunction`. For each processing event select the closest preceding sensor reading. Output:
+   `EnrichedProcessingEvent`.
+3. Join corresponding `IN` and `OUT` processing events into one `StationProcessingEvent` using `KeyedProcessFunction`.
+   Key the stream by `line, station, unitId` first.
+4. Aggregate station processing events to calculate final output. Key the stream by `unitId` and apply custom
+   `KeyedProcessFunction`.
+5. Print the results on the standard output (`stream.print()`).
+
+### Hint 2 - enrich with sensor readings
+
+- We need to connect two streams, use `KeyedCoProcessFunction`.
+- Sensor readings and processing events can come out of order. Therefore, we need to buffer them so that we can then
+  join them reliably. In `processElement1()` and `processElement2()` we only buffer incoming events. The actual join
+  logic happens in `onTimer()`.
+- Use `MapState<Long, SensorReadings>` to store sensor readings where key is the timestamp of the sensor readings.
+- For processing events we can use `MapState<Long, ProcessingEvent>` where the key is monotonously increasing index.
+- When `onTimer()` is called, we first match processing events with sensor readings. After that, we clean up buffers by
+  removing events older than timer timestamp.
+
+### Hint 3 - joining IN and OUT processing events
+
+- For each `unitId` we expect exactly two events. Using `KeyedProcessFunction` you can save the first event in the state
+  until the second event arrives. Use `ValueState<ProcessingEvent>`.
+
+### Hint 4 - calculate final output
+
+- For each `unitId` we expect exactly `S` `EnrichedProcessingEvent`s.
+- When station processing event arrives, update state.
+- When `count == S`, emit final result.
+
+---
+
+### Possible optimisations
+
+#### Timer coalescing
+
+`onTimer()` is called for each registered timestamp. Each `onTimer()` introduces some overhead, especially when it
+triggers costly operations such as iterating over `MapState`. For instance, in `EnrichWithEnergyConsumption` (
+`KeyedCoProcessFunction`) we iterate over both sensor readings buffer and processing events buffer. Instead of calling
+`onTimer()` 10 times a second, we can round timer values to full seconds. This way we will have only one `onTimer()`
+call instead of 10 times. The overall performance should most likely improve.
+
+```java
+
+@Override
+public void processElement1(ProcessingEvent value,
+                            KeyedCoProcessFunction<Tuple2<Integer, Integer>, ProcessingEvent, SensorReadings, EnrichedProcessingEvent>.Context ctx,
+                            Collector<EnrichedProcessingEvent> out) throws Exception {
+    // ...
+    ctx.timerService().registerEventTimeTimer(timestamp);
+    // OR coalesce timer
+    ctx.timerService().registerEventTimeTimer((timestamp * 1000) / 1000);
+}
+```

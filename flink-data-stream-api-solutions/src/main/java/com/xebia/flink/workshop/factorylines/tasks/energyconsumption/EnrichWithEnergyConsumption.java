@@ -124,7 +124,7 @@ class EnrichWithEnergyConsumption
     }
 
     private SensorReadings findLatestLowerOrEqual(Instant timestamp, List<SensorReadings> sensorReadings) {
-        // TODO: use binary search if sensorReadings list may be long. For a short list linear complexity is fine.
+        // TODO: use binary search if sensorReadings list may be long. For a short list, linear complexity is fine.
         for (int i = sensorReadings.size() - 1; i >= 0; i--) {
             SensorReadings readings = sensorReadings.get(i);
             Instant r = readings.getTimestamp();
