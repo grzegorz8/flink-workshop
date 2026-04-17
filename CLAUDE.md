@@ -40,41 +40,41 @@ mvn package -P IDE
 
 ### Module Structure
 
-| Module                            | Purpose                                                                     |
-|-----------------------------------|-----------------------------------------------------------------------------|
-| `flink-common`                    | Shared data models (`Event`, `SensorReading`), JSON serialization utilities |
-| `flink-data-stream-api`           | Level 1 exercises — DataStream API (high & low level)                       |
-| `flink-data-stream-api-solutions` | Reference solutions for Level 1 exercises                                   |
-| `flink-optimisations`             | Level 2 — JMH benchmarks for serialization, object reuse, reinterpret       |
-| `flink-autoscaler`                | Level 3 — Kubernetes Operator autoscaler test job (`BusyJob`)               |
-| `flink-datagen`                   | Kafka event generator used with autoscaler (`--records-per-second` flag)    |
-| `flink-state-processor`           | Level 4 exercises — Flink State Processor API with RocksDB                  |
+| Module                            | Purpose                                                                           |
+|-----------------------------------|-----------------------------------------------------------------------------------|
+| `flink-common`                    | Shared `Event` model, JSON serialization schemas, `RandomStringGenerator` utility |
+| `flink-data-stream-api`           | Level 1 exercises — DataStream API (high & low level)                             |
+| `flink-data-stream-api-solutions` | Reference solutions for Level 1 exercises                                         |
+| `flink-optimisations`             | Level 2 — JMH benchmarks for serialization, object reuse, reinterpret, state mgmt |
+| `flink-autoscaler`                | Level 3 — Kubernetes Operator autoscaler test job (`BusyJob`)                     |
+| `flink-k8s-deployment`            | Kafka data generator and processing job for K8s deployment                        |
+| `flink-state-processor`           | Level 4 exercises — Flink State Processor API with RocksDB                        |
 
 ### Domain Model
 
 The factory scenario: multiple **assembly lines**, each with **stations**. Two event streams:
 
-- `ProcessingEvent` — units entering/leaving stations
-- `SensorReading` — temperature and energy consumption metrics
+- `ProcessingEvent` — units entering/leaving stations (defined per-module, not in `flink-common`)
+- `SensorReadings` — temperature and energy consumption metrics (defined per-module)
 
 ### Key Patterns
 
 - **Exercise modules** contain `TODO`-marked classes; corresponding solutions live in `flink-data-stream-api-solutions`.
-- Fat JARs (via `maven-shade-plugin`) are built for `flink-autoscaler`, `flink-datagen`, and `flink-optimisations` for
-  deployment/benchmarking.
+- Fat JARs (via `maven-shade-plugin`) are built for `flink-autoscaler`, `flink-k8s-deployment`, and `flink-optimisations`
+  for deployment/benchmarking.
 - Avro schema compilation is used in `flink-optimisations` via `avro-maven-plugin`.
 
 ### Kubernetes Infrastructure (`k8s/`)
 
 Minikube-based setup with Helm-deployed components:
 
-- Flink Kubernetes Operator, MinIO (S3), Kafka, AKHQ (Kafka UI), Prometheus
+- Flink Kubernetes Operator, MinIO (S3), Kafka, AKHQ (Kafka UI), Schema Registry, Prometheus
 - Job manifests: `busy-job-deployment.yaml`, `data-generator-deployment.yaml`, session cluster
 
 ## Tech Stack
 
 - **Java 17**, **Apache Flink 2.2.0**, Scala binary 2.12
-- **Kafka connector** 4.0.1-2.0, **Avro** 1.12.1
+- **Kafka connector** 4.0.1-2.0, **Avro** 1.11.4
 - **JUnit 5**, **JMH** 1.37, **Lombok**, **Jackson**
 
 ## Exercise Docs
