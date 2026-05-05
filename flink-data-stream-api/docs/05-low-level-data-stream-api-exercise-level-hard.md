@@ -26,7 +26,7 @@ public static void main() {
 
 ## Exercise 2: Factory lines - sensor readings aggregation (KeyedCoProcessFunction)
 
-**Goal:** Implement a streaming job, that for each unit calculates:
+**Goal:** Implement a streaming job that for each unit calculates:
 
 - total energy consumed during assembly,
 - the average temperature at each station during unit's assembly.

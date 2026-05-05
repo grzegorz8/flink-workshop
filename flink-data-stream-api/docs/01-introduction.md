@@ -3,7 +3,7 @@
 ## Introduction
 
 You work for a manufacturing company that operates L assembly lines, each consisting of S processing stations. All lines
-are identical, and each station is responsible for a specific step in the assembly proces. Every unit goes through all
+are identical, and each station is responsible for a specific step in the assembly process. Every unit goes through all
 stations on a selected line. Processing a unit at a single station typically takes 30–60 seconds. Each station is
 equipped with several sensors that capture metrics such as temperature and energy consumption, with readings collected
 every second.
