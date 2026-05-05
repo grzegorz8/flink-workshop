@@ -1,0 +1,18 @@
+{
+  "type": "record",
+  "name": "ProcessingEventAvro",
+  "namespace": "com.xebia.flink.workshop.factorylines.model",
+  "fields": [
+    {
+      "name": "timestamp",
+      "type": {"type": "long", "logicalType": "timestamp-millis"}
+    },
+    {"name": "line",    "type": "int"},
+    {"name": "station", "type": "int"},
+    {"name": "unitId",  "type": "long"},
+    {
+      "name": "action",
+      "type": {"type": "enum", "name": "Action", "symbols": ["IN", "OUT"]}
+    }
+  ]
+}

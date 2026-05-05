@@ -1,0 +1,90 @@
+---
+defaultRules:
+  create: false
+
+alertmanager:
+  enabled: false
+
+prometheus-node-exporter:
+  enabled: false
+
+# Disable all exporters and monitors
+kubeApiServer:
+  enabled: false
+
+kubeControllerManager:
+  enabled: false
+
+kubeScheduler:
+  enabled: false
+
+kubelet:
+  enabled: false
+
+kubeStateMetrics:
+  enabled: false
+
+nodeExporter:
+  enabled: false
+
+# Optional: disable if you truly want minimal.
+# If you want Kubernetes object metrics (deployments/pods/etc), set this to true.
+kube-state-metrics:
+  enabled: false
+
+# Prometheus settings
+prometheus:
+  prometheusSpec:
+    retention: 6h
+    scrapeInterval: 60s
+    evaluationInterval: 15s
+
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          accessModes:
+            - ReadWriteOnce
+          resources:
+            requests:
+              storage: 1Gi
+
+    resources:
+      requests:
+        cpu: 300m
+        memory: 512Mi
+
+    serviceMonitorSelectorNilUsesHelmValues: false
+    podMonitorSelectorNilUsesHelmValues: false
+    probeSelectorNilUsesHelmValues: true
+    ruleSelectorNilUsesHelmValues: true
+
+grafana:
+  enabled: true
+
+  initChownData:
+    enabled: false
+  securityContext:
+    runAsUser: 472
+    runAsGroup: 472
+    fsGroup: 472
+
+  service:
+    type: LoadBalancer
+    port: 8088
+
+  adminUser: admin
+  adminPassword: admin
+
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+
+  persistence:
+    enabled: true
+
+  sidecar:
+    dashboards:
+      enabled: true
+    datasources:
+      enabled: true

@@ -1,0 +1,9 @@
+# Ignore build directories
+target/
+
+# Intellij IDEA
+.idea/
+*.iml
+
+# Ignore mac specific files
+.DS_Store
