@@ -60,7 +60,8 @@ You can implement the job in the following way:
   join them reliably. In `processElement1()` and `processElement2()`, we only buffer incoming events. The actual join
   logic happens in `onTimer()`.
 - Use `MapState<Long, SensorReadings>` to store sensor readings where key is the timestamp of the sensor readings.
-- For processing events we can use `MapState<Long, ProcessingEvent>` where the key is a monotonically increasing index.
+- For processing events we can use `MapState<Long, List<ProcessingEvent>>` where the key is the timestamp in
+  milliseconds and the value is the list of processing events with that timestamp.
 - When `onTimer()` is called, we first match processing events with sensor readings. After that, we clean up buffers by
   removing events older than timer timestamp.
 
@@ -74,14 +75,6 @@ You can implement the job in the following way:
 - For each `unitId`, we expect exactly `S` `EnrichedProcessingEvent`s.
 - When station processing event arrives, update state.
 - When `count == S`, emit final result.
-
----
-
-### Alternative way of buffering events
-
-Instead of maintaining `MapState<Long, ProcessingEvent>` where the key is a monotonically increasing number, we can
-store events in `MapState<Long, List<ProcessingEvent>>` where the key is the timestamp in milliseconds and the value is
-the list of processing events with the given timestamp.
 
 ---
 
