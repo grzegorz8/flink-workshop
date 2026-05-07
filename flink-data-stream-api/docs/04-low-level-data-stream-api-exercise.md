@@ -127,23 +127,4 @@ WatermarkStrategy
 
 ### Possible optimisations
 
-#### Timer coalescing
-
-`onTimer()` is called for each registered timestamp. Each `onTimer()` introduces some overhead, especially when it
-triggers costly operations such as iterating over `MapState`. For instance, in `EnrichWithEnergyConsumption` (
-`KeyedCoProcessFunction`), we iterate over both sensor readings buffer and processing events buffer. Instead of calling
-`onTimer()` many times per second, we can round timer values to full seconds. This way we will have only one `onTimer()`
-call instead of 10 times. The overall performance should most likely improve.
-
-```java
-
-@Override
-public void processElement1(ProcessingEvent value,
-                            KeyedCoProcessFunction<Tuple2<Integer, Integer>, ProcessingEvent, SensorReadings, EnrichedProcessingEvent>.Context ctx,
-                            Collector<EnrichedProcessingEvent> out) throws Exception {
-    // ...
-    ctx.timerService().registerEventTimeTimer(timestamp);
-    // OR coalesce timer
-    ctx.timerService().registerEventTimeTimer((timestamp * 1000) / 1000);
-}
-```
+See [State Management optimisations](../../flink-optimisations/04-state-management.md).

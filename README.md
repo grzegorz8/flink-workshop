@@ -50,7 +50,7 @@ directory and install them in the following order:
 4. `03-kafka`
 5. `04-akhq`
 6. `05-schema-registry`
-7. `10-prometheus` - Running all the services above alongside several Flink jobs can be resource-intensive, so consider
+7. `10-prometheus` - Running all the services alongside several Flink jobs can be resource-intensive, so consider
    uninstalling Prometheus after verification. We will install it again during workshops.
 
 We recommend installing [k9s](https://k9scli.io/) or a similar tool to make it easier to observe Kubernetes resources.

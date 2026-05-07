@@ -12,7 +12,7 @@ it is crucial to know that:
    and `Map.Entry::getValue()` **lazily deserialize** the object.
 
 With RocksDB state, there can be a noticeable performance difference depending on where `getValue()` is called.
-Compare the two code snippets below.
+Compare the two code snippets below. We iterate `rightBuffer` to find the closest object by timestamp.
 
 ```java
 
@@ -76,20 +76,16 @@ Sometimes we want to iterate over `MapState` entries - for example, to remove ou
 `key < timestamp`) or to find the closest matching object. In general, the `MapState` entries iterator does not
 guarantee
 any ordering, so we need to iterate over all entries, which can be time-consuming. However, when the RocksDB state
-backend is used, entries are ordered by key value (a side effect of RocksDB's implementation — Sorted String Tables).
+backend is used, entries are ordered by key value (a side effect of RocksDB's implementation - Sorted String Tables).
 We can take advantage of this and break the loop as soon as a key exceeds the given timestamp. Compare
 [IterateEntriesSortedRememberKeyJoin.java](src/main/java/com/xebia/flink/workshop/optimisations/statemanagement/IterateEntriesSortedRememberKeyJoin.java)
 with [IterateEntriesRememberKeyJoin.java](src/main/java/com/xebia/flink/workshop/optimisations/statemanagement/IterateEntriesRememberKeyJoin.java).
 
-Similarly, we also can improve the implementation
-of [EnrichWithSensorReadings.java](../flink-data-stream-api/src/main/java/com/xebia/flink/workshop/factorylines/tasks/sensorreadingsaggr/EnrichWithSensorReadings.java)
-in the following way.
-
 ```java
-private void cleanUpLeftBuffer(long timestamp) throws Exception {
-    Iterator<Map.Entry<Long, List<StationProcessingEvent>>> iterator = leftBuffer.entries().iterator();
+private void cleanUpBuffer(long timestamp) throws Exception {
+    Iterator<Map.Entry<Long, List<ProcessingEvent>>> iterator = buffer.entries().iterator();
     while (iterator.hasNext()) {
-        Map.Entry<Long, List<StationProcessingEvent>> entry = iterator.next();
+        Map.Entry<Long, List<ProcessingEvent>> entry = iterator.next();
         if (entry.getKey() <= timestamp) {
             iterator.remove();
         } else {
@@ -100,10 +96,12 @@ private void cleanUpLeftBuffer(long timestamp) throws Exception {
 }
 ```
 
-In this case, `MapState` iterator delegates to native RocksDB iterator, thus the results are returned in sorted order.
-**Note that this will not work with `HashMap` state which does not return entries in any particular order.**
+In this case, the `MapState` iterator delegates to the native RocksDB iterator, so the results are returned in sorted
+order.
+**Note that this will not work with `HashMap` state, which does not return entries in any particular order.**
 
-`IterateMapEntriesBenchmarks` shows that this technique can bring a noticeable performance improvement (~10%).
+`IterateMapEntriesBenchmarks` shows that this technique can bring a noticeable performance improvement (~10% in our
+example).
 
 ```
 Benchmark                                                                   Mode  Cnt    Score    Error   Units
