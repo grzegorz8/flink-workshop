@@ -142,7 +142,7 @@ Key observations when using `KeyedProcessFunction`.
 
 Let's analyze how Flink processes a stream of events in `KeyedProcessFunction`.
 
-<img src="images/KeyedProcessFunction%20-%20sample%20processing%20flow%20%281%29.png" alt="drawing" width="1080"/>
+<img src="images/KeyedProcessFunction%20-%20sample%20processing%20flow.png" alt="drawing" width="1080"/>
 <img src="images/KeyedProcessFunction%20-%20sample%20processing%20flow%20%282%29.png" alt="drawing" width="1080"/>
 <img src="images/KeyedProcessFunction%20-%20sample%20processing%20flow%20%283%29.png" alt="drawing" width="1080"/>
 <img src="images/KeyedProcessFunction%20-%20sample%20processing%20flow%20%284%29.png" alt="drawing" width="1080"/>
@@ -233,40 +233,3 @@ private void processBufferedEvents(long timestamp,
     }
 }
 ```
-
----
-
-**Version 3** - Timer Coalescing
-
-Flink maintains only one timer per key and timestamp, so you can reduce the number of timers by reducing the timer
-resolution to coalesce them.
-
-```java
-
-@Override
-public void processElement(Event value,
-                           KeyedProcessFunction<Long, Event, InactivityAlert>.Context ctx,
-                           Collector<InactivityAlert> out) throws Exception {
-    // Truncate timestamp to full second.
-    long timestamp = coalesce(ctx.timestamp());
-    if (timestamp < ctx.timerService().currentWatermark()) {
-        log.debug("Late event: {}.", value);
-        return;
-    }
-
-    if (!buffer.contains(timestamp)) {
-        buffer.put(timestamp, value);
-    }
-    ctx.timerService().registerEventTimeTimer(timestamp);
-}
-
-private long coalesce(Long timestamp) {
-    if (timestamp % 1000L == 0) {
-        return timestamp;
-    } else {
-        return (timestamp / 1000L) * 1000L + 1000L;
-    }
-}
-```
-
----
