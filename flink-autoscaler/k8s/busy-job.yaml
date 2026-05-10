@@ -82,7 +82,7 @@ spec:
     web.submit.enable: "true"
     pipeline.max-parallelism: "60"
     job.autoscaler.enabled: "true"
-    # jobmanager.scheduler : adaptive
+    jobmanager.scheduler : adaptive
     job.autoscaler.stabilization.interval: 1m
     job.autoscaler.metrics.window: 5m
     job.autoscaler.target.utilization: "0.75"

@@ -80,3 +80,41 @@ two Flink jobs:
   Kafka output topic.
 - Decrease or increase catch-up duration `job.autoscaler.catch-up.duration`. The longer the duration, the less
   aggressive scaling up.
+
+
+When adaptive scheduler the Job Manager requests for more Tasks Managers. Once the new TMs are stable, JM initiates job
+restart.
+
+```
+2026-05-08 11:19:20,057 INFO  org.apache.flink.runtime.resourcemanager.slotmanager.FineGrainedSlotManager [] - Received resource requirements from job c810f8e64e8c58b6674e99d270c8af74: [ResourceRequirement{resourceProfile=ResourceProfile{UNKNOWN}, numberOfRequiredSlots=2}]
+2026-05-08 11:19:20,119 INFO  org.apache.flink.runtime.resourcemanager.slotmanager.FineGrainedSlotManager [] - Matching resource requirements against available resources.
+Missing resources:
+	 Job c810f8e64e8c58b6674e99d270c8af74
+		ResourceRequirement{resourceProfile=ResourceProfile{UNKNOWN}, numberOfRequiredSlots=1}
+Current resources:
+	TaskManager busy-job-taskmanager-1-1
+		Available: ResourceProfile{cpuCores=0, taskHeapMemory=0 bytes, taskOffHeapMemory=0 bytes, managedMemory=0 bytes, networkMemory=0 bytes}
+		Total:     ResourceProfile{cpuCores=0.4, taskHeapMemory=256.000mb (268435456 bytes), taskOffHeapMemory=0 bytes, managedMemory=0 bytes, networkMemory=64.000mb (67108864 bytes)}
+2026-05-08 11:19:20,189 INFO  org.apache.flink.runtime.resourcemanager.active.ActiveResourceManager [] - need request 1 new workers, current worker number 1, declared worker number 2
+2026-05-08 11:19:20,190 INFO  org.apache.flink.runtime.util.config.memory.ProcessMemoryUtils [] - The derived from fraction jvm overhead memory (92.444mb (96935027 bytes)) is less than its min value 192.000mb (201326592 bytes), min value will be used instead
+2026-05-08 11:19:20,190 INFO  org.apache.flink.runtime.resourcemanager.active.ActiveResourceManager [] - Requesting new worker with resource spec WorkerResourceSpec {cpuCores=0.4, taskHeapSize=256.000mb (268435456 bytes), taskOffHeapSize=0 bytes, networkMemSize=64.000mb (67108864 bytes), managedMemSize=0 bytes, numSlots=1}, current pending count: 1.
+2026-05-08 11:19:20,191 INFO  org.apache.flink.runtime.externalresource.ExternalResourceUtils [] - Enabled external resources: []
+2026-05-08 11:19:20,192 INFO  org.apache.flink.configuration.Configuration                 [] - Config uses fallback configuration key 'kubernetes.service-account' instead of key 'kubernetes.taskmanager.service-account'
+2026-05-08 11:19:20,193 INFO  org.apache.flink.kubernetes.KubernetesResourceManagerDriver  [] - Creating new TaskManager pod with name busy-job-taskmanager-1-2 and resource <1024,0.4>.
+2026-05-08 11:19:20,232 INFO  org.apache.flink.kubernetes.KubernetesResourceManagerDriver  [] - Pod busy-job-taskmanager-1-2 is created.
+2026-05-08 11:19:20,234 INFO  org.apache.flink.kubernetes.KubernetesResourceManagerDriver  [] - Received new TaskManager pod: busy-job-taskmanager-1-2
+2026-05-08 11:19:20,234 INFO  org.apache.flink.runtime.resourcemanager.active.ActiveResourceManager [] - Requested worker busy-job-taskmanager-1-2 with resource spec WorkerResourceSpec {cpuCores=0.4, taskHeapSize=256.000mb (268435456 bytes), taskOffHeapSize=0 bytes, networkMemSize=64.000mb (67108864 bytes), managedMemSize=0 bytes, numSlots=1}.
+2026-05-08 11:19:39,403 INFO  org.apache.flink.runtime.resourcemanager.active.ActiveResourceManager [] - Registering TaskManager with ResourceID busy-job-taskmanager-1-2 (pekko.tcp://flink@10.244.0.16:6122/user/rpc/taskmanager_0) at ResourceManager
+2026-05-08 11:19:39,492 INFO  org.apache.flink.runtime.resourcemanager.slotmanager.FineGrainedSlotManager [] - Registering task executor busy-job-taskmanager-1-2 under 30b3b8665636ba818e8d1fe614cdc0b8 at the slot manager.
+2026-05-08 11:19:39,493 INFO  org.apache.flink.runtime.resourcemanager.slotmanager.DefaultSlotStatusSyncer [] - Starting allocation of slot f7b809b00777ea1f1efa12e36fcee4ad from busy-job-taskmanager-1-2 for job c810f8e64e8c58b6674e99d270c8af74 with resource profile ResourceProfile{cpuCores=0.4, taskHeapMemory=256.000mb (268435456 bytes), taskOffHeapMemory=0 bytes, managedMemory=0 bytes, networkMemory=64.000mb (67108864 bytes)}.
+2026-05-08 11:19:39,493 INFO  org.apache.flink.runtime.resourcemanager.active.ActiveResourceManager [] - Worker busy-job-taskmanager-1-2 is registered.
+2026-05-08 11:19:39,494 INFO  org.apache.flink.runtime.resourcemanager.active.ActiveResourceManager [] - Worker busy-job-taskmanager-1-2 with resource spec WorkerResourceSpec {cpuCores=0.4, taskHeapSize=256.000mb (268435456 bytes), taskOffHeapSize=0 bytes, networkMemSize=64.000mb (67108864 bytes), managedMemSize=0 bytes, numSlots=1} was requested in current attempt. Current pending count after registering: 0.
+2026-05-08 11:19:39,785 INFO  org.apache.flink.runtime.scheduler.adaptive.DefaultStateTransitionManager [] - Transitioning from Idling to Stabilizing, job c810f8e64e8c58b6674e99d270c8af74.
+2026-05-08 11:20:26,123 INFO  org.apache.flink.runtime.scheduler.adaptive.DefaultStateTransitionManager [] - Desired resources are met, transitioning to the subsequent state, job c810f8e64e8c58b6674e99d270c8af74.
+2026-05-08 11:20:26,123 INFO  org.apache.flink.runtime.scheduler.adaptive.DefaultStateTransitionManager [] - Transitioning from Stabilizing to Transitioning, job c810f8e64e8c58b6674e99d270c8af74.
+2026-05-08 11:20:26,126 INFO  org.apache.flink.runtime.executiongraph.ExecutionGraph       [] - Job Busy job (c810f8e64e8c58b6674e99d270c8af74) switched from state RUNNING to CANCELLING.
+2026-05-08 11:20:26,127 INFO  org.apache.flink.runtime.executiongraph.ExecutionGraph       [] - Source: events (1/1) (70d1da2bc5593268133b3eddee5870b2_bc764cd8ddf7a0cff126f51c16239658_0_0) switched from RUNNING to CANCELING.
+2026-05-08 11:20:26,127 INFO  org.apache.flink.runtime.executiongraph.ExecutionGraph       [] - KeyedProcess (1/1) (70d1da2bc5593268133b3eddee5870b2_0a448493b4782967b150582570326227_0_0) switched from RUNNING to CANCELING.
+2026-05-08 11:20:26,130 INFO  org.apache.flink.runtime.executiongraph.ExecutionGraph       [] - some-process-function (1/1) (70d1da2bc5593268133b3eddee5870b2_ea632d67b7d595e5b851708ae9ad79d6_0_0) switched from RUNNING to CANCELING.
+2026-05-08 11:20:26,130 INFO  org.apache.flink.runtime.executiongraph.ExecutionGraph       [] - another-process-function -> Sink: Writer -> Sink: Committer (1/1) (70d1da2bc5593268133b3eddee5870b2_9f363b997377bca8297737e982f8f09d_0_0) switched from RUNNING to CANCELING.
+```

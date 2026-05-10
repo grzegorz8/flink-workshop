@@ -1,0 +1,16 @@
+<settings xmlns="http://maven.apache.org/SETTINGS/1.0.0"
+          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.0.0
+                              https://maven.apache.org/xsd/settings-1.0.0.xsd">
+  <servers>
+    <server>
+      <id>minio-flink</id>
+      <username>admin</username>
+      <password>adminpass</password>
+      <configuration>
+        <endpoint>http://localhost:9000</endpoint>
+        <pathStyleAccess>true</pathStyleAccess>
+      </configuration>
+    </server>
+  </servers>
+</settings>

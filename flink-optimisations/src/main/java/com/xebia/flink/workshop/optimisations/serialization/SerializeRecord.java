@@ -1,7 +1,6 @@
 package com.xebia.flink.workshop.optimisations.serialization;
 
 
-import com.xebia.flink.workshop.optimisations.serialization.model.EventPojo;
 import com.xebia.flink.workshop.optimisations.serialization.model.EventRecord;
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
 import org.apache.flink.api.common.serialization.SerializerConfigImpl;
@@ -38,6 +37,7 @@ public class SerializeRecord {
         final Configuration configuration = new Configuration();
         configuration.set(PipelineOptions.GENERIC_TYPES, false);
         configuration.setString("rest.flamegraph.enabled", "true");
+        configuration.setString("rest.profiling.enabled", "true");
         configuration.setString("rest.port", "8083");
         return configuration;
     }

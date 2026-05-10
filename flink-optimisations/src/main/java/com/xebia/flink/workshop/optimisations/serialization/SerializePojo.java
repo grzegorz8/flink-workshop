@@ -37,6 +37,7 @@ public class SerializePojo {
         final Configuration configuration = new Configuration();
         configuration.set(PipelineOptions.GENERIC_TYPES, false);
         configuration.setString("rest.flamegraph.enabled", "true");
+        configuration.setString("rest.profiling.enabled", "true");
         configuration.setString("rest.port", "8082");
         return configuration;
     }
