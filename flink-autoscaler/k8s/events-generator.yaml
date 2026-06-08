@@ -37,7 +37,7 @@ spec:
     parallelism: 1
     args:
       - "--records-per-second"
-      - "50.0"
+      - "80.0"
   jobManager:
     replicas: 1
     resource:

@@ -1,16 +1,42 @@
 # flink-autoscaler
 
-In this module we focus on testing and observing flink-kubernetes-operator Autoscaler. To this end, we are going to run
-two Flink jobs:
+In this exercise we focus on testing and observing the `flink-kubernetes-operator` Autoscaler. To this end, we are going
+to run two Flink jobs:
 
 - **EventsGenerator** which produces data at given pace (`com.xebia.flink.workshop.autoscaler.EventsGenerator`),
-- **BusyJob** which processes events at constant pace per subtask. The busy-job (
-  `com.xebia.flink.workshop.autoscaler.BusyJob`) consists of 4 operators:
+- **BusyJob** which processes events at constant pace per subtask. The busy-job
+  (`com.xebia.flink.workshop.autoscaler.BusyJob`) consists of 4 operators:
    ```
    (Source) -> (some-process-function) -> (another-process-function) -> (Sink)
    ```
-  where `some-process-function` processes at most 50 events per second and `another-process-function` up to 100 evens
+  where `some-process-function` processes at most 50 events per second and `another-process-function` up to 100 events
   per second.
+
+## Exercise
+
+Your task is to configure the autoscaler in the `busy-job` deployment and observe how it rescales the pipeline as the
+input rate changes.
+
+`flink-autoscaler/k8s/busy-job.yaml` is a **skeleton** `FlinkDeployment` with the autoscaler-related settings missing.
+Open it and fill in the `TODO` blocks under `spec.flinkConfiguration`:
+
+1. Enable the autoscaler (`job.autoscaler.enabled`).
+2. Pick a scheduler (`jobmanager.scheduler`) — `adaptive` allows in-place rescaling.
+3. Configure observation windows (`stabilization.interval`, `metrics.window`).
+4. Configure target utilization and its boundary
+   (`target.utilization`, `target.utilization.boundary`).
+5. Bound scale-up / scale-down aggressiveness
+   (`scale-up.max-factor`, `scale-down.max-factor`, `scale-down.interval`).
+6. Tell the autoscaler how long a restart takes and how fast to catch up
+   (`restart.time`, `catch-up.duration`).
+7. Set per-vertex parallelism bounds and the key-group adjustment mode
+   (`vertex.min-parallelism`, `vertex.max-parallelism`,
+   `scaling.key-group.partitions.adjust.mode`).
+
+If you get stuck, an already filled-in reference is available at
+`flink-autoscaler/k8s/busy-job-example-configuration.yaml`. Try to complete the skeleton on your own first.
+
+Operator docs are available [here](https://nightlies.apache.org/flink/flink-kubernetes-operator-docs-stable/docs/custom-resource/autoscaler/).
 
 ## Scenario
 
@@ -26,7 +52,7 @@ two Flink jobs:
    kubectl apply -f flink-autoscaler/k8s/kafka-topics.yaml
    ```
 
-3. Run `BusyJob`.
+3. Run `BusyJob`. Fill in the skeleton first (see the **Exercise** section above).
     ```bash
     kubectl apply -f flink-autoscaler/k8s/busy-job.yaml
     ```
