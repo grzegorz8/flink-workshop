@@ -23,7 +23,7 @@ class EnrichWithEnergyConsumptionWithLateness
 
     private final Duration allowedLateness;
 
-    private transient MapState<Long, List<ProcessingEvent>> leftBuffer;
+    private transient MapState<Long, ProcessingEvent> leftBuffer;
     private transient MapState<Long, SensorReadings> rightBuffer;
 
     EnrichWithEnergyConsumptionWithLateness(Duration allowedLateness) {
@@ -32,7 +32,7 @@ class EnrichWithEnergyConsumptionWithLateness
 
     @Override
     public void open(OpenContext openContext) throws Exception {
-        this.leftBuffer = getRuntimeContext().getMapState(new MapStateDescriptor<>("left-buffer", Types.LONG, Types.LIST(Types.POJO(ProcessingEvent.class))));
+        this.leftBuffer = getRuntimeContext().getMapState(new MapStateDescriptor<>("left-buffer", Types.LONG, Types.POJO(ProcessingEvent.class)));
         this.rightBuffer = getRuntimeContext().getMapState(new MapStateDescriptor<>("right-buffer", Types.LONG, Types.POJO(SensorReadings.class)));
     }
 
@@ -54,12 +54,7 @@ class EnrichWithEnergyConsumptionWithLateness
             // else: beyond allowed lateness - silently drop.
         } else {
             // On-time event: buffer and wait until the watermark reaches this timestamp.
-            List<ProcessingEvent> events = leftBuffer.get(timestamp);
-            if (events == null) {
-                events = new ArrayList<>();
-            }
-            events.add(value);
-            leftBuffer.put(timestamp, events);
+            leftBuffer.put(timestamp, value);
             ctx.timerService().registerEventTimeTimer(timestamp);
         }
     }
@@ -95,15 +90,14 @@ class EnrichWithEnergyConsumptionWithLateness
                               Collector<EnrichedProcessingEvent> out,
                               List<SensorReadings> sensorReadings) throws Exception {
         long watermark = ctx.timerService().currentWatermark();
-        Iterator<Map.Entry<Long, List<ProcessingEvent>>> iterator = leftBuffer.entries().iterator();
+        Iterator<Map.Entry<Long, ProcessingEvent>> iterator = leftBuffer.entries().iterator();
         while (iterator.hasNext()) {
-            Map.Entry<Long, List<ProcessingEvent>> next = iterator.next();
+            Map.Entry<Long, ProcessingEvent> next = iterator.next();
             Long eventTimestamp = next.getKey();
             if (eventTimestamp <= watermark) {
-                for (ProcessingEvent event : next.getValue()) {
-                    SensorReadings readings = findLatestLowerOrEqual(event.getTimestamp(), sensorReadings);
-                    out.collect(new EnrichedProcessingEvent(event, readings));
-                }
+                ProcessingEvent event = next.getValue();
+                SensorReadings readings = findLatestLowerOrEqual(event.getTimestamp(), sensorReadings);
+                out.collect(new EnrichedProcessingEvent(event, readings));
                 iterator.remove();
             }
         }

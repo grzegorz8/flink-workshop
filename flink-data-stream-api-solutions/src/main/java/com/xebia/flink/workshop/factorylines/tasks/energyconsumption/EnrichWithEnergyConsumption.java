@@ -18,12 +18,12 @@ import java.util.List;
 class EnrichWithEnergyConsumption
         extends KeyedCoProcessFunction<Tuple2<Integer, Integer>, ProcessingEvent, SensorReadings, EnrichedProcessingEvent> {
 
-    private transient MapState<Long, List<ProcessingEvent>> leftBuffer;
+    private transient MapState<Long, ProcessingEvent> leftBuffer;
     private transient MapState<Long, SensorReadings> rightBuffer;
 
     @Override
     public void open(OpenContext openContext) throws Exception {
-        this.leftBuffer = getRuntimeContext().getMapState(new MapStateDescriptor<>("left-buffer", Types.LONG, Types.LIST(Types.POJO(ProcessingEvent.class))));
+        this.leftBuffer = getRuntimeContext().getMapState(new MapStateDescriptor<>("left-buffer", Types.LONG, Types.POJO(ProcessingEvent.class)));
         this.rightBuffer = getRuntimeContext().getMapState(new MapStateDescriptor<>("right-buffer", Types.LONG, Types.POJO(SensorReadings.class)));
     }
 
@@ -32,12 +32,7 @@ class EnrichWithEnergyConsumption
                                 KeyedCoProcessFunction<Tuple2<Integer, Integer>, ProcessingEvent, SensorReadings, EnrichedProcessingEvent>.Context ctx,
                                 Collector<EnrichedProcessingEvent> out) throws Exception {
         Long timestamp = ctx.timestamp();
-        List<ProcessingEvent> events = leftBuffer.get(timestamp);
-        if (events == null) {
-            events = new ArrayList<>();
-        }
-        events.add(value);
-        leftBuffer.put(timestamp, events);
+        leftBuffer.put(timestamp, value);
         ctx.timerService().registerEventTimeTimer(timestamp);
     }
 
@@ -71,14 +66,12 @@ class EnrichWithEnergyConsumption
     private void matchAndEmit(long timestamp,
                               Collector<EnrichedProcessingEvent> out,
                               List<SensorReadings> sensorReadings) throws Exception {
-        List<ProcessingEvent> events = leftBuffer.get(timestamp);
-        if (events == null) {
+        ProcessingEvent event = leftBuffer.get(timestamp);
+        if (event == null) {
             return;
         }
-        for (ProcessingEvent event : events) {
-            SensorReadings readings = findLatestLowerOrEqual(event.getTimestamp(), sensorReadings);
-            out.collect(new EnrichedProcessingEvent(event, readings));
-        }
+        SensorReadings readings = findLatestLowerOrEqual(event.getTimestamp(), sensorReadings);
+        out.collect(new EnrichedProcessingEvent(event, readings));
         leftBuffer.remove(timestamp);
     }
 
