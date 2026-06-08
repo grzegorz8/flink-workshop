@@ -1,0 +1,122 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: busy-job
+  namespace: flink
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: busy-job
+  namespace: flink
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: flink
+subjects:
+  - kind: ServiceAccount
+    name: busy-job
+    namespace: flink
+---
+apiVersion: flink.apache.org/v1beta1
+kind: FlinkDeployment
+metadata:
+  name: busy-job
+  namespace: flink
+spec:
+  flinkVersion: v2_0
+  image: flink:2.2.0-scala_2.12-java17
+  imagePullPolicy: IfNotPresent
+  serviceAccount: busy-job
+  job:
+    jarURI: s3://flink/flink-autoscaler-1.0.jar
+    entryClass: com.xebia.flink.workshop.autoscaler.BusyJob
+    upgradeMode: savepoint
+    state: running
+    parallelism: 1
+  jobManager:
+    replicas: 1
+    resource:
+      cpu: 0.5
+      memory: 1024m
+  taskManager:
+    resource:
+      cpu: 0.4
+      memory: 1024m
+  podTemplate:
+    apiVersion: v1
+    kind: Pod
+    metadata:
+      name: busy-job-pod-template
+    spec:
+      containers:
+        - name: flink-main-container
+          ports:
+            - containerPort: 9249
+              name: metrics
+          env:
+            - name: ENABLE_BUILT_IN_PLUGINS
+              value: "flink-s3-fs-presto-2.2.0.jar"
+            - name: AWS_JAVA_V1_DISABLE_DEPRECATION_ANNOUNCEMENT
+              value: "true"
+  flinkConfiguration:
+    rest.bind-port: 8087
+    rest.port: 8087
+    execution.checkpointing.dir: "s3://flink/busy-job/checkpoints/"
+    execution.checkpointing.interval: 60s
+    execution.checkpointing.timeout: 1h
+    execution.checkpointing.min-pause: 60s
+    execution.checkpointing.savepoint-dir: "s3://flink/busy-job/savepoints/"
+    high-availability.storageDir: "s3://flink/busy-job/high-availability/"
+    high-availability.type: kubernetes
+    kubernetes.rest-service.exposed.type: LoadBalancer
+    metrics.reporter.prom.factory.class: org.apache.flink.metrics.prometheus.PrometheusReporterFactory
+    s3.access-key: admin
+    s3.endpoint: http://minio.s3.svc.cluster.local:9000
+    s3.path.style.access: true
+    s3.secret-key: adminpass
+    state.backend.type: hashmap
+    taskmanager.numberOfTaskSlots: "1"
+    web.cancel.enable: "true"
+    web.submit.enable: "true"
+    taskmanager.memory.managed.fraction: 0.0
+    restart-strategy.type: exponential-delay
+    restart-strategy.exponential-delay.initial-backoff: 60s
+    restart-strategy.exponential-delay.max-backoff: 2h
+    restart-strategy.exponential-delay.backoff-multiplier: "2"
+    restart-strategy.exponential-delay.jitter-factor: "0.1"
+    restart-strategy.exponential-delay.reset-backoff-threshold: 24h
+    restart-strategy.exponential-delay.attempts-before-reset-backoff: "2147483647"
+    pipeline.max-parallelism: "60"
+
+    # TODO: Enable the autoscaler.
+    # Hint: job.autoscaler.enabled
+    # Docs: https://nightlies.apache.org/flink/flink-kubernetes-operator-docs-stable/docs/custom-resource/autoscaler/
+
+    # TODO: Pick a scheduler. Try `adaptive` to allow in-place rescaling without redeploying TaskManagers.
+    # Hint: jobmanager.scheduler
+
+    # TODO: Set the maximum parallelism for the pipeline. The autoscaler cannot scale a vertex
+    #       above this value (and key-group based operators require it to be set up-front).
+    # Hint:
+
+    # TODO: Configure the autoscaler's observation window.
+    #       - stabilization.interval — how long after a scaling event to ignore metrics
+    #       - metrics.window         — the rolling window over which metrics are aggregated
+    # Hint: job.autoscaler.stabilization.interval, job.autoscaler.metrics.window
+
+    # TODO: Configure target utilization and its tolerated boundary.
+    # Hint: job.autoscaler.target.utilization, job.autoscaler.target.utilization.boundary
+
+    # TODO: Bound how aggressively the autoscaler may scale up and down each step.
+    # Hint: job.autoscaler.scale-up.max-factor, job.autoscaler.scale-down.max-factor,
+    #       job.autoscaler.scale-down.interval
+
+    # TODO: Tell the autoscaler how long a restart takes and how quickly the pipeline
+    #       should catch up on the backlog after scaling.
+    # Hint: job.autoscaler.restart.time, job.autoscaler.catch-up.duration
+
+    # TODO: Set per-vertex parallelism bounds and key-group adjustment mode.
+    # Hint: job.autoscaler.vertex.min-parallelism, job.autoscaler.vertex.max-parallelism,
+    #       job.autoscaler.scaling.key-group.partitions.adjust.mode
