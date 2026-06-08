@@ -23,7 +23,7 @@ public class SensorReadings {
 
         private Type type;
         private double value;
-        private String unit;
+        private String unit;  // Celsius degrees / kWh
     }
 
     private Instant timestamp;

@@ -9,6 +9,7 @@ import org.apache.flink.api.common.eventtime.WatermarkStrategy;
 import org.apache.flink.api.common.typeinfo.Types;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.api.java.tuple.Tuple3;
+import org.apache.flink.streaming.api.datastream.ConnectedStreams;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 
@@ -48,11 +49,11 @@ public class EnergyConsumptionPerUnitJob {
                                 .withTimestampAssigner((SerializableTimestampAssigner<SensorReadings>) (element, recordTimestamp) -> element.getTimestamp().toEpochMilli())
                 );
 
-        processingEvents
+        ConnectedStreams<ProcessingEvent, SensorReadings> processingEventsAndSensorReadings = processingEvents
                 // join processing-events with sensor-readings
                 .keyBy(e -> Tuple2.of(e.getLine(), e.getStation()), Types.TUPLE(Types.INT, Types.INT))
-                .connect(sensorReadings.keyBy(e -> Tuple2.of(e.getLine(), e.getStation()), Types.TUPLE(Types.INT, Types.INT)))
-                .process(new EnrichWithEnergyConsumption())
+                .connect(sensorReadings.keyBy(e -> Tuple2.of(e.getLine(), e.getStation()), Types.TUPLE(Types.INT, Types.INT)));
+        processingEventsAndSensorReadings.process(new EnrichWithEnergyConsumption())
                 // join IN and OUT events
                 .keyBy(
                         e -> Tuple3.of(e.getProcessingEvent().getLine(), e.getProcessingEvent().getStation(), e.getProcessingEvent().getUnitId()),
