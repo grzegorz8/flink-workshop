@@ -1,5 +1,11 @@
 # flink-data-stream-api
 
+## Prerequisites
+
+- Install and enable Lombok plugin.
+- Select IDE maven profile. Most of Flink dependencies are scoped as `provided`, `IDE` profile makes them scoped as
+  `compile`.
+
 ## Introduction
 
 You work for a manufacturing company that operates L assembly lines, each consisting of S processing stations. All lines

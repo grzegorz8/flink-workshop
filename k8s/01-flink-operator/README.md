@@ -9,12 +9,12 @@
 2. Create `flink-operator` namespace and install the operator. Create `flink` namespace where Flink jobs will be
    deployed.
     ```bash
-    kubectl create namespace flink-operator
-    kubectl create namespace flink
+    kubectl create namespace flink-operator && \
+    kubectl create namespace flink && \
     helm install flink-kubernetes-operator flink-operator-repo/flink-kubernetes-operator \
         --version 1.13.0 \
         -n flink-operator \
-        -f k8s/01-flink-operator/values.yaml
+        -f k8s/01-flink-operator/values.yaml && \
     kubectl apply -f k8s/01-flink-operator/node-access-rbac.yaml
     ```
 

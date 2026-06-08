@@ -57,10 +57,6 @@ public class ProcessingEventStateMigration {
                 .withOperator(operatorIdV2, transformation)
                 .removeOperator(operatorId)
                 .write(targetSavepointPath);
-//        SavepointWriter.newSavepoint(env, 120)
-//                .withOperator(operatorId, transformation)
-//                .write(targetSavepointPath);
-
         env.execute();
     }
 
