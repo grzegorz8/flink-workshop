@@ -1,0 +1,25 @@
+syntax = "proto3";
+
+package com.xebia.flink.workshop.optimisations.serialization.proto;
+
+option java_package = "com.xebia.flink.workshop.optimisations.serialization.proto";
+option java_multiple_files = true;
+option optimize_for = SPEED;
+
+message EventProto {
+  int64 id = 1;
+  int64 long_value1 = 2;
+  int64 long_value2 = 3;
+  string string_value1 = 4;
+  string string_value2 = 5;
+  string string_value3 = 6;
+  repeated NestedObjectProto nested_object_list = 7;
+  bool boolean_value1 = 8;
+  bool boolean_value2 = 9;
+}
+
+message NestedObjectProto {
+  string string_value1 = 1;
+  string string_value2 = 2;
+  int64 long_value1 = 3;
+}

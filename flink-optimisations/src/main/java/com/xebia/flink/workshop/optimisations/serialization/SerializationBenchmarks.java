@@ -3,6 +3,9 @@ package com.xebia.flink.workshop.optimisations.serialization;
 import com.xebia.flink.workshop.optimisations.serialization.model.EventNonPojo;
 import com.xebia.flink.workshop.optimisations.serialization.model.EventPojo;
 import com.xebia.flink.workshop.optimisations.serialization.model.EventRecord;
+import com.twitter.chill.protobuf.ProtobufSerializer;
+import com.xebia.flink.workshop.optimisations.serialization.proto.EventProto;
+import com.xebia.flink.workshop.optimisations.serialization.proto.NestedObjectProto;
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
 import org.apache.flink.api.common.serialization.SerializerConfigImpl;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
@@ -190,6 +193,30 @@ public class SerializationBenchmarks {
 
     @Benchmark
     @OperationsPerInvocation(value = RECORDS_PER_INVOCATION)
+    public void serializerProtobuf(FlinkEnvironmentContext context) throws Exception {
+        StreamExecutionEnvironment env = context.env;
+        env.setParallelism(4);
+        SerializerConfigImpl serializerConfig = (SerializerConfigImpl) env.getConfig().getSerializerConfig();
+        serializerConfig.setGenericTypes(true);
+        serializerConfig.setForceKryo(true);
+        serializerConfig.registerTypeWithKryoSerializer(EventProto.class, ProtobufSerializer.class);
+        serializerConfig.registerTypeWithKryoSerializer(NestedObjectProto.class, ProtobufSerializer.class);
+
+        DataGeneratorSource<EventProto> source = new DataGeneratorSource<>(
+                new ProtobufInputGenerator(),
+                RECORDS_PER_INVOCATION,
+                TypeInformation.of(EventProto.class)
+        );
+
+        env.fromSource(source, WatermarkStrategy.noWatermarks(), "protobuf-source")
+                .rebalance()
+                .sinkTo(new DiscardingSink<>());
+
+        env.execute();
+    }
+
+    @Benchmark
+    @OperationsPerInvocation(value = RECORDS_PER_INVOCATION)
     public void serializerKryo(FlinkEnvironmentContext context) throws Exception {
         StreamExecutionEnvironment env = context.env;
         env.setParallelism(4);
@@ -312,6 +339,36 @@ public class SerializationBenchmarks {
 
         @Override
         public Tuple9<Long, Long, Long, String, String, String, List<Tuple3<String, String, Long>>, Boolean, Boolean> map(Long value) {
+            return template;
+        }
+    }
+
+    static class ProtobufInputGenerator implements GeneratorFunction<Long, EventProto> {
+        private EventProto template;
+
+        @Override
+        public void open(SourceReaderContext readerContext) {
+            EventProto.Builder builder = EventProto.newBuilder()
+                    .setId(0L)
+                    .setLongValue1(200L)
+                    .setLongValue2(300L)
+                    .setStringValue1(generateRandomString(10))
+                    .setStringValue2(generateRandomString(15))
+                    .setStringValue3(generateRandomString(8))
+                    .setBooleanValue1(RANDOM.nextBoolean())
+                    .setBooleanValue2(RANDOM.nextBoolean());
+            IntStream.range(0, 3).forEach(i -> builder.addNestedObjectList(
+                    NestedObjectProto.newBuilder()
+                            .setStringValue1(generateRandomString(15))
+                            .setStringValue2(generateRandomString(5))
+                            .setLongValue1(i)
+                            .build()
+            ));
+            template = builder.build();
+        }
+
+        @Override
+        public EventProto map(Long value) {
             return template;
         }
     }
